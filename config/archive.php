@@ -11,7 +11,7 @@ function get_ahamed_archive_data(): array {
             'tagline'=>'Personal Digital Journal & Editorial Portfolio',
             'short_bio'=>'', 'display_name'=>'', 'hero_headline'=>'', 'hero_supporting'=>'',
             'profile_image'=>'', 'established_label'=>'', 'education_summary'=>'',
-            'current_focus'=>'', 'philosophy_quote'=>'', 'full_biography'=>'',
+            'current_focus'=>'', 'philosophy_quote'=>'', 'full_biography'=>'', 'born_label'=>'', 'profile_image_alt'=>'',
             'favourite_things'=>[], 'social_links'=>[]
         ],
         'posts'=>[], 'categories'=>[], 'albums'=>[], 'photographs'=>[],

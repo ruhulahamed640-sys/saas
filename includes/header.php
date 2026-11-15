@@ -7,6 +7,17 @@ use AhamedDrafted\Config\Auth;
 Auth::startSession();
 
 $archive = get_ahamed_archive_data();
+try {
+    $pdo = \\AhamedDrafted\\Config\\Database::getConnection();
+    $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+    $agent = strtolower($_SERVER['HTTP_USER_AGENT'] ?? '');
+    $device = preg_match('/ipad|tablet|kindle|playbook/i', $agent) ? 'tablet' : (preg_match('/mobile|android|iphone|ipod/i', $agent) ? 'mobile' : 'desktop');
+    $visitor = hash_hmac('sha256', ($_SERVER['REMOTE_ADDR'] ?? '') . '|' . $agent, date('Y-m-d') . '|' . (getenv('APP_URL') ?: 'ruhul.online'));
+    $track = $pdo->prepare('INSERT INTO page_views (path, visitor_hash, device_type) VALUES (?, ?, ?)');
+    $track->execute([$path, $visitor, $device]);
+} catch (Throwable $e) {
+    error_log('Page view tracking skipped: ' . $e->getMessage());
+}
 $profile = $archive['profile'];
 $pageTitle = isset($pageTitle) ? $pageTitle . ' — AHAMED DRAFTED' : 'AHAMED DRAFTED — ' . ($profile['tagline'] ?: 'Personal Digital Journal');
 $pageDesc = $pageDesc ?? ($profile['short_bio'] ?: 'The personal digital journal and editorial portfolio of Ruhul Ahamed.');

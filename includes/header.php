@@ -33,6 +33,7 @@ $canonical = 'https://ruhul.online/' . ($canonicalPath ?? '');
   <link rel="stylesheet" href="/assets/css/tokens.css">
   <link rel="stylesheet" href="/assets/css/base.css">
   <link rel="stylesheet" href="/assets/css/components.css">
+  <link rel="stylesheet" href="/assets/css/mobile.css">
   <script src="/assets/js/theme.js" defer></script>
   <script src="/assets/js/navigation.js" defer></script>
 </head>

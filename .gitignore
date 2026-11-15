@@ -8,12 +8,5 @@ Thumbs.db
 /vendor/
 /node_modules/
 
-# Private configuration
-config/database.php
-config/seed_data.php
-sql/schema_and_seed.sql
-
-# Environment and secrets
-.env
-.env.*
-!.env.example
+# Private server configuration
+config/database.local.php

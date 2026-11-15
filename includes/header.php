@@ -8,7 +8,7 @@ Auth::startSession();
 
 $archive = get_ahamed_archive_data();
 try {
-    $pdo = \\AhamedDrafted\\Config\\Database::getConnection();
+    $pdo = \AhamedDrafted\Config\Database::getConnection();
     $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
     $agent = strtolower($_SERVER['HTTP_USER_AGENT'] ?? '');
     $device = preg_match('/ipad|tablet|kindle|playbook/i', $agent) ? 'tablet' : (preg_match('/mobile|android|iphone|ipod/i', $agent) ? 'mobile' : 'desktop');

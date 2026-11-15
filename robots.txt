@@ -2,5 +2,6 @@ User-agent: *
 Allow: /
 Disallow: /admin/
 Disallow: /api/v1/admin/
-Disallow: /api/v1/media/private/
-Sitemap: https://ahameddrafted.in/sitemap.xml.php
+Disallow: /config/
+Disallow: /database/
+Sitemap: https://ruhul.online/sitemap.xml

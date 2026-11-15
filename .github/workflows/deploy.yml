@@ -2,8 +2,7 @@ name: Deploy Ahamed Drafted to DirectAdmin
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -17,7 +16,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
+        with:
+          submodules: false
+          persist-credentials: false
       - name: Deploy website files
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
@@ -36,6 +37,5 @@ jobs:
             **/.env.*
             **/README.md
             **/LICENSE
-            config/database.php
-            config/seed_data.php
-            sql/**
+            **/MOBILE_AND_CONTENT_SETUP.md
+            **/database/**

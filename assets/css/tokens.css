@@ -1,0 +1,96 @@
+/* ============================================================================
+ * AHAMED DRAFTED — Centralized Design Tokens (Strict Editorial Palette)
+ * ============================================================================ */
+
+:root {
+  /* Strict Primary Colour Tokens */
+  --color-paper: #F6F5F1;
+  --color-white: #FFFFFF;
+  --color-ink: #191919;
+  --color-deep-ink: #111111;
+  --color-muted: #777777;
+  --color-soft-grey: #A5A5A5;
+  --color-border: #D9D7D0;
+  --color-accent: #8D7863;
+  --color-dark-surface: #222222;
+
+  /* Semantic Surface & Text Mappings (Light Mode Default) */
+  --background: var(--color-paper);
+  --surface: var(--color-white);
+  --surface-secondary: #EFECE6;
+  --text-primary: var(--color-ink);
+  --text-secondary: var(--color-muted);
+  --text-muted: var(--color-soft-grey);
+  --border-color: var(--color-border);
+
+  /* Editorial Typography */
+  --font-heading: "Playfair Display", "Cormorant Garamond", Georgia, serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Typography Scale (Desktop Default with Fluid Scaling) */
+  --type-display-xl: clamp(2.85rem, 5.5vw, 5.5rem);   /* 88px desktop */
+  --type-display-lg: clamp(2.5rem, 4.5vw, 4.5rem);    /* 72px desktop */
+  --type-h1: clamp(2.15rem, 3.5vw, 3.5rem);           /* 56px desktop */
+  --type-h2: clamp(1.75rem, 2.625vw, 2.625rem);       /* 42px desktop */
+  --type-h3: clamp(1.35rem, 1.875vw, 1.875rem);       /* 30px desktop */
+  --type-h4: clamp(1.15rem, 1.4375vw, 1.4375rem);     /* 23px desktop */
+  --type-body-lg: 1.125rem;                           /* 18px */
+  --type-body: 1rem;                                  /* 16px */
+  --type-small: 0.875rem;                             /* 14px */
+  --type-caption: 0.75rem;                            /* 12px */
+
+  /* Spacing System */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+  --space-10: 128px;
+
+  /* Layout & Grid Constants */
+  --max-page-width: 1440px;
+  --main-content-width: 1200px;
+  --reading-width: 680px;
+  --side-margin: 64px;
+  --section-spacing: 120px;
+  --grid-columns: 12;
+  --grid-gap: 24px;
+
+  /* Restrained Corner Radii & Transitions */
+  --radius-none: 0px;
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --transition-editorial: 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-theme="dark"] {
+  --background: #111111;
+  --surface: #191919;
+  --surface-secondary: #222222;
+  --text-primary: #F5F5F2;
+  --text-secondary: #B0B0B0;
+  --text-muted: #858585;
+  --border-color: #353535;
+  --color-accent: #B5A18B;
+}
+
+@media (max-width: 1024px) {
+  :root {
+    --side-margin: 32px;
+    --section-spacing: 72px;
+    --grid-columns: 8;
+  }
+}
+
+@media (max-width: 767px) {
+  :root {
+    --side-margin: 20px;
+    --section-spacing: 56px;
+    --grid-columns: 4;
+    --grid-gap: 16px;
+  }
+}

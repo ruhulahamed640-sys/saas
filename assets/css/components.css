@@ -1,0 +1,161 @@
+/* ============================================================================
+ * AHAMED DRAFTED — Editorial Grid, Navigation, Cards, Forms & Admin Layout
+ * ============================================================================ */
+
+.editorial-shell {
+  max-width: var(--max-page-width);
+  margin-inline: auto;
+  padding-inline: var(--side-margin);
+}
+
+.editorial-container {
+  max-width: var(--main-content-width);
+  margin-inline: auto;
+}
+
+.editorial-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--grid-columns), minmax(0, 1fr));
+  gap: var(--grid-gap);
+}
+
+.editorial-section {
+  padding-block: var(--section-spacing);
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Sticky Global Header */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background-color: var(--background);
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color var(--transition-editorial);
+}
+
+.site-header__inner {
+  max-width: var(--max-page-width);
+  margin-inline: auto;
+  padding-inline: var(--side-margin);
+  height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+}
+
+.site-wordmark {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.site-nav__link {
+  font-size: var(--type-small);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  padding-block: var(--space-2);
+  border-bottom: 1px solid transparent;
+}
+
+.site-nav__link:hover,
+.site-nav__link.is-active {
+  color: var(--text-primary);
+  border-bottom-color: var(--color-accent);
+}
+
+/* Buttons */
+.btn-editorial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 12px 24px;
+  font-family: var(--font-body);
+  font-size: var(--type-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  border: 1px solid var(--text-primary);
+  background-color: var(--text-primary);
+  color: var(--background);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  transition: all var(--transition-editorial);
+}
+
+.btn-editorial:hover {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-white);
+}
+
+.btn-editorial--outline {
+  background-color: transparent;
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+.btn-editorial--outline:hover {
+  border-color: var(--text-primary);
+  background-color: var(--surface);
+  color: var(--text-primary);
+}
+
+/* Editorial Pull Quote */
+.pull-quote {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: var(--type-h3);
+  line-height: 1.35;
+  padding: var(--space-6) 0 var(--space-6) var(--space-6);
+  border-left: 2px solid var(--color-accent);
+  margin-block: var(--space-7);
+  color: var(--text-primary);
+}
+
+/* Cards & Surfaces */
+.surface-card {
+  background-color: var(--surface);
+  border: 1px solid var(--border-color);
+  padding: var(--space-6);
+  border-radius: var(--radius-xs);
+}
+
+/* Admin Workspace Layout */
+.admin-layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.admin-sidebar {
+  background-color: var(--surface);
+  border-right: 1px solid var(--border-color);
+  padding: var(--space-6) var(--space-4);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.admin-main {
+  padding: var(--space-7) var(--space-8);
+  background-color: var(--background);
+}
+
+@media (max-width: 1024px) {
+  .site-nav { display: none; }
+  .admin-layout { grid-template-columns: 1fr; }
+  .admin-sidebar { position: static; height: auto; }
+  .admin-main { padding: var(--space-5); }
+}

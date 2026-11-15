@@ -1,0 +1,45 @@
+/* Responsive presentation for small screens and tablets */
+.skip-link{position:absolute;left:-9999px;top:8px;z-index:999;background:var(--surface);padding:12px}
+.skip-link:focus{left:12px}
+.mobile-menu-toggle{display:none;border:1px solid var(--border-color);background:var(--surface);color:var(--text-primary);padding:10px 12px;min-height:44px}
+.header-actions{display:flex;align-items:center;gap:10px}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(240px,.8fr);gap:clamp(24px,5vw,72px);align-items:center}
+.hero-copy{font-size:var(--type-body-lg);color:var(--text-secondary);max-width:620px;margin-block:24px}
+.hero-actions{display:flex;gap:12px;flex-wrap:wrap}
+.hero-image img{width:100%;max-height:620px;object-fit:cover}
+.section-heading{margin-block:16px 28px}
+.content-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.content-card img{width:100%;aspect-ratio:16/10;object-fit:cover;margin-bottom:16px}
+.content-card h3{margin-block:10px}
+.empty-state{border:1px solid var(--border-color);background:var(--surface);padding:clamp(20px,4vw,40px);margin-block:20px}
+.text-link{display:inline-block;margin-top:20px;text-decoration:underline;text-underline-offset:4px}
+@media(max-width:1024px){
+ .site-header__inner{height:auto;min-height:68px;flex-wrap:wrap;padding-block:12px}
+ .site-nav{display:none;order:3;flex:0 0 100%;width:100%;padding:12px 0;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+ .site-nav.is-open{display:grid}
+ .site-nav__link{padding:12px 8px;border:1px solid var(--border-color);font-size:11px;text-align:center}
+ .mobile-menu-toggle{display:inline-flex;align-items:center;gap:8px}
+ .admin-link{display:none}
+}
+@media(max-width:767px){
+ html{font-size:16px}
+ .editorial-shell{padding-inline:0}
+ .editorial-section{padding-block:clamp(36px,10vw,56px)}
+ .editorial-container{width:100%;padding-inline:20px}
+ .hero-grid{grid-template-columns:1fr;gap:28px}
+ .hero-grid>div{min-width:0}
+ .hero-image{max-width:480px}
+ .content-grid{grid-template-columns:1fr}
+ .surface-card{padding:20px}
+ .display-xl{font-size:clamp(2.45rem,11vw,4rem)}
+ .pull-quote{padding-left:18px;margin-block:32px}
+ .site-wordmark{font-size:1rem;letter-spacing:.12em}
+ .header-actions{margin-left:auto}
+ .header-actions .btn-editorial{min-height:42px;padding:9px 12px;font-size:10px}
+ .site-nav.is-open{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .admin-layout{display:block}
+ .admin-sidebar{position:relative;height:auto;max-height:42vh;overflow:auto}
+ .admin-main{padding:20px}
+ .editorial-grid{grid-template-columns:1fr;gap:16px}
+ .editorial-grid>*{grid-column:1/-1!important}
+}

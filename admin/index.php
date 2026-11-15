@@ -1,111 +1,68 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/../config/auth.php';
-require_once __DIR__ . '/../config/seed_data.php';
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/archive.php';
 
 use AhamedDrafted\Config\Auth;
+use function AhamedDrafted\Config\Database\getConnection;
 Auth::startSession();
-$_SESSION['user_role'] = 'owner'; // Authenticated owner workspace
+$pdo = \AhamedDrafted\Config\Database::getConnection();
 
-$archive = get_ahamed_archive_data();
-$profile = $archive['profile'];
-$activeModule = $_GET['module'] ?? 'overview';
-
-$sidebarModules = [
-    'overview'    => '01. Overview',
-    'profile'     => '02. Profile',
-    'homepage'    => '03. Homepage',
-    'journal'     => '04. Journal',
-    'categories'  => '05. Categories',
-    'gallery'     => '06. Photo Gallery',
-    'albums'      => '07. Albums',
-    'friends'     => '08. Friends',
-    'memories'    => '09. Memories',
-    'timeline'    => '10. Timeline',
-    'events'      => '11. Birthday & Events',
-    'places'      => '12. Places',
-    'education'   => '13. Education',
-    'interests'   => '14. Interests',
-    'achievements'=> '15. Achievements',
-    'projects'    => '16. Projects',
-    'guestbook'   => '17. Guestbook',
-    'comments'    => '18. Comments',
-    'media'       => '19. Media Library',
-    'navigation'  => '20. Navigation',
-    'privacy'     => '21. Privacy',
-    'users'       => '22. Users & Permissions',
-    'seo'         => '23. SEO Settings',
-    'settings'    => '24. Website Settings',
-    'backup'      => '25. Backup',
-];
+if (empty($_SESSION['user_id']) || !in_array($_SESSION['user_role'] ?? '', ['owner','editor'], true)) {
+    header('Location: login.php'); exit;
+}
+$allowed = ['journal','category','album','photograph','memory','friend','event','place','project','timeline','guestbook','education','achievement','interest'];
+$message = '';
+$error = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!Auth::verifyCsrfToken($_POST['csrf_token'] ?? null)) {
+        $error = 'Session validation failed. Refresh and try again.';
+    } else {
+        $section = (string)($_POST['section'] ?? '');
+        $title = trim((string)($_POST['title'] ?? ''));
+        $slug = trim((string)($_POST['slug'] ?? ''));
+        $json = trim((string)($_POST['data_json'] ?? '{}'));
+        $visibility = ($_POST['visibility'] ?? 'private') === 'public' ? 'public' : 'private';
+        $status = in_array($_POST['status'] ?? '', ['draft','published','pending','archived'], true) ? $_POST['status'] : 'draft';
+        $decoded = json_decode($json, true);
+        if (!in_array($section, $allowed, true) || $title === '' || !is_array($decoded)) {
+            $error = 'Choose a valid content type, enter a title, and provide valid JSON content.';
+        } else {
+            $decoded['title'] = $decoded['title'] ?? $title;
+            if ($slug !== '') $decoded['slug'] = $slug;
+            $stmt = $pdo->prepare('INSERT INTO content_records (section, slug, title, data_json, visibility, status, published_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
+            $stmt->execute([$section, $slug !== '' ? $slug : null, $title, json_encode($decoded, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES), $visibility, $status, $status === 'published' ? date('Y-m-d H:i:s') : null]);
+            $message = 'Content record saved.';
+        }
+    }
+}
+$counts = $pdo->query("SELECT section, COUNT(*) AS total FROM content_records GROUP BY section")->fetchAll();
+$total = (int)$pdo->query('SELECT COUNT(*) FROM content_records')->fetchColumn();
+$views = (int)$pdo->query('SELECT COUNT(*) FROM page_views')->fetchColumn();
+$recent = $pdo->query('SELECT id,section,title,status,visibility,created_at FROM content_records ORDER BY id DESC LIMIT 12')->fetchAll();
+$csrf = htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8');
 ?>
-<!DOCTYPE html>
-<html lang="en" data-theme="light">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="robots" content="noindex, nofollow">
-  <title>CMS Administration — AHAMED DRAFTED</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/css/tokens.css">
-  <link rel="stylesheet" href="../assets/css/base.css">
-  <link rel="stylesheet" href="../assets/css/components.css">
-  <script src="../assets/js/theme.js"></script>
-</head>
-<body>
-  <div class="admin-layout">
-    <aside class="admin-sidebar" aria-label="CMS Module Navigation">
-      <div style="margin-bottom: var(--space-5); padding-bottom: var(--space-4); border-bottom: 1px solid var(--border-color);">
-        <a href="../index.php" class="site-wordmark" style="font-size:1rem;">AHAMED DRAFTED</a>
-        <p class="meta-label" style="margin-top:4px;">EDITORIAL CMS v2.4 · PHP 8.2</p>
-      </div>
-      <nav style="display:flex; flex-direction:column; gap:4px;">
-        <?php foreach ($sidebarModules as $key => $label): ?>
-          <a href="?module=<?= urlencode($key) ?>" class="site-nav__link <?= $activeModule === $key ? 'is-active' : '' ?>" style="padding:8px 10px; text-transform:none; font-size:0.82rem;">
-            <?= htmlspecialchars($label) ?>
-          </a>
-        <?php endforeach; ?>
-        <a href="../index.php" class="site-nav__link" style="padding:8px 10px; margin-top:12px; color:var(--color-accent);">← View Public Website</a>
-      </nav>
-    </aside>
-    <div class="admin-main">
-      <header style="display:flex; justify-content:space-between; align-items:center; padding-bottom: var(--space-5); margin-bottom: var(--space-6); border-bottom: 1px solid var(--border-color);">
-        <div>
-          <p class="meta-label">ADMINISTRATION / <?= strtoupper(htmlspecialchars($activeModule)) ?></p>
-          <h1 class="h2" style="margin-top:4px;"><?= htmlspecialchars($sidebarModules[$activeModule] ?? 'Overview') ?></h1>
-        </div>
-        <div style="display:flex; gap:12px;">
-          <button type="button" class="btn-editorial btn-editorial--outline" data-theme-toggle><span data-theme-label>Deep Ink</span></button>
-          <a href="?module=journal" class="btn-editorial">+ New Journal Entry</a>
-        </div>
-      </header>
-
-      <!-- Overview Metrics (Real Archive Counts — Zero Fabricated Analytics) -->
-      <div class="editorial-grid" style="margin-bottom: var(--space-7);">
-        <div class="surface-card" style="grid-column: span 3;">
-          <p class="meta-label">PUBLISHED POSTS</p>
-          <p class="h1" style="margin-top:8px; margin-bottom:0;"><?= count($archive['posts']) ?></p>
-        </div>
-        <div class="surface-card" style="grid-column: span 3;">
-          <p class="meta-label">PHOTOGRAPHS &amp; ALBUMS</p>
-          <p class="h1" style="margin-top:8px; margin-bottom:0;"><?= count($archive['photographs']) ?> / <?= count($archive['albums']) ?></p>
-        </div>
-        <div class="surface-card" style="grid-column: span 3;">
-          <p class="meta-label">MEMORIES ARCHIVED</p>
-          <p class="h1" style="margin-top:8px; margin-bottom:0;"><?= count($archive['memories']) ?></p>
-        </div>
-        <div class="surface-card" style="grid-column: span 3;">
-          <p class="meta-label">PENDING GUESTBOOK</p>
-          <p class="h1" style="margin-top:8px; margin-bottom:0;">1</p>
-        </div>
-      </div>
-
-      <!-- Post & Profile Editor Surface -->
-      <div class="surface-card">
-        <p class="meta-label" style="margin-bottom: var(--space-4);">CMS MODULE WORKSPACE — <?= strtoupper(htmlspecialchars($activeModule)) ?></p>
-        <p style="color: var(--text-secondary);">Connected to <code>/api/v1/admin/<?= htmlspecialchars($activeModule) ?></code> via PDO &amp; Fetch API.</p>
-      </div>
-    </div>
-  </div>
-</body>
-</html>
+<!doctype html><html lang="en" data-theme="light"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin Dashboard — Ahamed Drafted</title>
+<link rel="stylesheet" href="../assets/css/tokens.css"><link rel="stylesheet" href="../assets/css/base.css"><link rel="stylesheet" href="../assets/css/components.css"><link rel="stylesheet" href="../assets/css/mobile.css">
+<style>
+.admin-wrap{max-width:1200px;margin:auto;padding:24px}.admin-top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:24px}.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:24px}.admin-panel{background:var(--surface);border:1px solid var(--border-color);padding:20px;margin-bottom:20px}.admin-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.admin-form label{display:flex;flex-direction:column;gap:6px;font-size:13px}.admin-form input,.admin-form select,.admin-form textarea{width:100%;padding:12px;border:1px solid var(--border-color);background:var(--background);color:var(--text-primary);font:inherit;border-radius:2px}.wide{grid-column:1/-1}.notice{padding:12px;background:var(--surface-secondary);margin-bottom:14px}.admin-table{width:100%;border-collapse:collapse}.admin-table th,.admin-table td{text-align:left;padding:10px;border-bottom:1px solid var(--border-color);font-size:13px}
+@media(max-width:700px){.admin-wrap{padding:16px}.stats{grid-template-columns:1fr}.admin-form{grid-template-columns:1fr}.wide{grid-column:auto}.admin-panel{padding:15px}.table-scroll{overflow-x:auto}}
+</style></head><body><main class="admin-wrap">
+<header class="admin-top"><div><p class="meta-label">AHAMED DRAFTED / CMS</p><h1 class="h2">Admin Dashboard</h1><p>Signed in as <?= htmlspecialchars($_SESSION['display_name'] ?? 'Admin') ?></p></div><div><a class="btn-editorial btn-editorial--outline" href="../">View Website</a> <a class="btn-editorial" href="logout.php">Log out</a></div></header>
+<?php if($message): ?><p class="notice"><?= htmlspecialchars($message) ?></p><?php endif; ?><?php if($error): ?><p class="notice"><?= htmlspecialchars($error) ?></p><?php endif; ?>
+<section class="stats"><div class="admin-panel"><p class="meta-label">CONTENT RECORDS</p><p class="h1"><?= $total ?></p></div><div class="admin-panel"><p class="meta-label">TRACKED PAGE VIEWS</p><p class="h1"><?= $views ?></p></div><div class="admin-panel"><p class="meta-label">CONTENT TYPES</p><p class="h1"><?= count($counts) ?></p></div></section>
+<section class="admin-panel"><p class="meta-label">REAL CONTENT ENTRY</p><h2 class="h3" style="margin:8px 0 18px">Add a content record</h2>
+<form method="post" class="admin-form"><input type="hidden" name="csrf_token" value="<?= $csrf ?>">
+<label>Content type<select name="section" required><?php foreach($allowed as $type): ?><option value="<?= $type ?>"><?= ucfirst($type) ?></option><?php endforeach; ?></select></label>
+<label>Title<input name="title" required maxlength="255"></label>
+<label>Slug (optional)<input name="slug" maxlength="190"></label>
+<label>Visibility<select name="visibility"><option value="private">Private</option><option value="public">Public</option></select></label>
+<label>Status<select name="status"><option value="draft">Draft</option><option value="published">Published</option><option value="pending">Pending</option></select></label>
+<label class="wide">Content JSON<textarea name="data_json" rows="9" required>{}</textarea></label>
+<p class="wide" style="font-size:13px;color:var(--text-secondary)">Enter the fields required by the selected page, for example: excerpt, category, featured_image, date_formatted, reading_time_minutes and content for a journal entry. No demo records are preloaded.</p>
+<button class="btn-editorial wide" type="submit">Save real content</button></form></section>
+<section class="admin-panel"><p class="meta-label">RECENT RECORDS</p><h2 class="h3" style="margin:8px 0 16px">Content archive</h2><div class="table-scroll"><table class="admin-table"><thead><tr><th>Type</th><th>Title</th><th>Status</th><th>Visibility</th><th>Created</th></tr></thead><tbody><?php foreach($recent as $row): ?><tr><td><?= htmlspecialchars($row['section']) ?></td><td><?= htmlspecialchars($row['title'] ?? '') ?></td><td><?= htmlspecialchars($row['status']) ?></td><td><?= htmlspecialchars($row['visibility']) ?></td><td><?= htmlspecialchars($row['created_at']) ?></td></tr><?php endforeach; ?><?php if(!$recent): ?><tr><td colspan="5">No content has been entered yet.</td></tr><?php endif; ?></tbody></table></div></section>
+</main></body></html>

@@ -37,7 +37,9 @@ header('X-Content-Type-Options: nosniff');
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $uri    = parse_url($_SERVER['REQUEST_URI'] ?? '/api/v1/profile', PHP_URL_PATH);
-$path   = preg_replace('#^.*/api/v1/?#', '', trim($uri, '/'));
+$routeQuery = trim((string)($_GET['route'] ?? ''), '/');
+$path = $routeQuery !== '' ? $routeQuery : preg_replace('#^.*/api/v1/?#', '', trim((string)$uri, '/'));
+$path = preg_replace('#^index\\.php/?#', '', $path);
 $parts  = array_values(array_filter(explode('/', $path)));
 
 $pdo  = Database::getConnection();
@@ -155,10 +157,10 @@ if ($method === 'POST' && $resource === 'guestbook') {
         json_response(['status' => 'error', 'message' => 'Please provide your name and a thoughtful message (at least 5 characters).'], 422);
     }
 
-    if ($pdo !== null) {
-        $stmt = $pdo->prepare('INSERT INTO guestbook (visitor_name, public_profile_url, message, moderation_status) VALUES (:name, :url, :msg, "pending")');
-        $stmt->execute([':name' => $name, ':url' => $link, ':msg' => $msg]);
-    }
+    $slug = 'guestbook-' . bin2hex(random_bytes(8));
+    $record = ['title'=>$name,'visitor_name'=>$name,'public_profile_url'=>$link,'message'=>$msg,'description'=>$msg,'moderation_status'=>'pending','created_at'=>date('Y-m-d H:i:s')];
+    $stmt = $pdo->prepare("INSERT INTO content_records (section,slug,title,data_json,visibility,status,published_at) VALUES ('guestbook',?,?,?,'private','pending',NULL)");
+    $stmt->execute([$slug,$name,json_encode($record, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR)]);
 
     json_response([
         'status'  => 'ok',
@@ -199,36 +201,36 @@ if ($resource === 'admin') {
         ], 201);
     }
 
+    $allowedModules = ['posts'=>'journal','albums'=>'album','photographs'=>'photograph','memories'=>'memory','events'=>'event','timeline'=>'timeline','birthdays'=>'birthday','songs'=>'song','projects'=>'project','places'=>'place','friends'=>'friend','education'=>'education','achievements'=>'achievement','interests'=>'interest'];
+    $section = $allowedModules[$adminModule] ?? null;
+    if ($section === null) json_response(['status'=>'error','message'=>'Unknown CMS module.'],404);
     if ($method === 'POST') {
-        json_response([
-            'status'  => 'ok',
-            'action'  => 'created',
-            'module'  => $adminModule,
-            'record'  => $input,
-            'message' => ucfirst($adminModule) . ' entry created in CMS.'
-        ], 201);
+        $title = trim((string)($input['title'] ?? ''));
+        if ($title === '') json_response(['status'=>'error','message'=>'Title is required.'],422);
+        $slug = trim((string)($input['slug'] ?? '')) ?: trim(preg_replace('/[^a-z0-9]+/i','-',strtolower($title)),'-');
+        $visibility = ($input['visibility'] ?? 'private') === 'public' ? 'public' : 'private';
+        $status = in_array(($input['status'] ?? 'draft'),['draft','published','pending','archived'],true) ? $input['status'] : 'draft';
+        $stmt = $pdo->prepare('INSERT INTO content_records(section,slug,title,data_json,visibility,status,published_at) VALUES(?,?,?,?,?,?,?)');
+        $stmt->execute([$section,$slug,$title,json_encode($input,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR),$visibility,$status,$status==='published'?date('Y-m-d H:i:s'):null]);
+        json_response(['status'=>'ok','id'=>(int)$pdo->lastInsertId(),'message'=>'Record created.'],201);
     }
-
-    if ($method === 'PUT' && $recordId !== null) {
-        json_response([
-            'status'  => 'ok',
-            'action'  => 'updated',
-            'module'  => $adminModule,
-            'id'      => $recordId,
-            'record'  => $input,
-            'message' => ucfirst($adminModule) . " #{$recordId} updated."
-        ]);
+    if (($method === 'PUT' || $method === 'PATCH') && $recordId !== null) {
+        $find=$pdo->prepare('SELECT data_json FROM content_records WHERE id=? AND section=?');
+        $find->execute([$recordId,$section]);$existing=$find->fetchColumn();
+        if($existing===false) json_response(['status'=>'error','message'=>'Record not found.'],404);
+        $merged=array_replace(json_decode((string)$existing,true) ?: [],$input);
+        $title=trim((string)($merged['title']??''));$slug=trim((string)($merged['slug']??''));$visibility=($merged['visibility']??'private')==='public'?'public':'private';
+        $status=in_array(($merged['status']??'draft'),['draft','published','pending','archived'],true)?$merged['status']:'draft';
+        $stmt=$pdo->prepare('UPDATE content_records SET title=?,slug=?,data_json=?,visibility=?,status=?,published_at=? WHERE id=? AND section=?');
+        $stmt->execute([$title,$slug,json_encode($merged,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR),$visibility,$status,$status==='published'?date('Y-m-d H:i:s'):null,$recordId,$section]);
+        json_response(['status'=>'ok','message'=>'Record updated.']);
     }
-
     if ($method === 'DELETE' && $recordId !== null) {
-        json_response([
-            'status'  => 'ok',
-            'action'  => 'deleted',
-            'module'  => $adminModule,
-            'id'      => $recordId,
-            'message' => ucfirst($adminModule) . " #{$recordId} removed from archive."
-        ]);
+        $stmt=$pdo->prepare('DELETE FROM content_records WHERE id=? AND section=?');$stmt->execute([$recordId,$section]);
+        if($stmt->rowCount()===0) json_response(['status'=>'error','message'=>'Record not found.'],404);
+        json_response(['status'=>'ok','message'=>'Record deleted.']);
     }
+    json_response(['status'=>'error','message'=>'Method not allowed.'],405);
 }
 
 json_response(['status' => 'error', 'message' => 'Endpoint not found.'], 404);

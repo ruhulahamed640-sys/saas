@@ -6,20 +6,27 @@ $canonicalPath = '';
 require_once __DIR__ . '/includes/header.php';
 $posts = $archive['posts'];
 $featuredPost = $posts[0] ?? null;
+$heroImage = (string)($profile['hero_image'] ?? '');
+$heroImageEnabled = (string)($profile['hero_image_enabled'] ?? '1') === '1';
+$heroImageValid = $heroImageEnabled
+    && preg_match('#^/uploads/hero/[A-Za-z0-9_-]+\.(?:png|webp)$#i', $heroImage) === 1
+    && is_file(__DIR__ . $heroImage);
 ?>
 <section class="editorial-section hero-section">
-  <div class="editorial-container hero-grid">
-    <div>
+  <div class="editorial-container hero-grid<?= $heroImageValid ? ' hero-grid--with-image' : '' ?>">
+    <div class="hero-content">
       <p class="meta-label">PERSONAL DIGITAL JOURNAL · WEST BENGAL, INDIA</p>
-      <h1 class="display-xl"><?= htmlspecialchars($profile['hero_headline'] ?: 'A Personal Archive of Ideas, Work & Everyday Life') ?></h1>
-      <p class="hero-copy"><?= htmlspecialchars($profile['hero_supporting'] ?: $profile['short_bio']) ?></p>
+      <h1 class="display-xl"><?= htmlspecialchars($profile['hero_headline'] ?: 'A Personal Archive of Ideas, Work & Everyday Life', ENT_QUOTES, 'UTF-8') ?></h1>
+      <p class="hero-copy"><?= htmlspecialchars($profile['hero_supporting'] ?: $profile['short_bio'], ENT_QUOTES, 'UTF-8') ?></p>
       <div class="hero-actions">
         <a href="/journal.php" class="btn-editorial">Explore Journal</a>
         <a href="/about.php" class="btn-editorial btn-editorial--outline">About Me</a>
       </div>
     </div>
-    <?php if (!empty($profile['profile_image'])): ?>
-    <figure class="hero-image"><img src="<?= htmlspecialchars($profile['profile_image']) ?>" alt="Profile portrait" fetchpriority="high" width="720" height="900"></figure>
+    <?php if ($heroImageValid): ?>
+    <figure class="hero-image">
+      <img src="<?= htmlspecialchars($heroImage, ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars((string)($profile['hero_image_alt'] ?? 'Portrait'), ENT_QUOTES, 'UTF-8') ?>" fetchpriority="high" decoding="async" width="900" height="1100">
+    </figure>
     <?php endif; ?>
   </div>
 </section>

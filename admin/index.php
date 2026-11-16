@@ -41,7 +41,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
    } elseif($action==='save_record'){
     $id=(int)($_POST['id']??0);$section=(string)($_POST['section']??'');$title=trim((string)($_POST['title']??''));$slug=trim((string)($_POST['slug']??''));$desc=trim((string)($_POST['description']??''));$date=trim((string)($_POST['event_date']??''));$artist=trim((string)($_POST['artist']??''));$url=trim((string)($_POST['external_url']??''));$visibility=($_POST['visibility']??'public')==='private'?'private':'public';$status=in_array($_POST['status']??'',['draft','published','pending','archived'],true)?$_POST['status']:'draft';
     if(!isset($types[$section])||$title==='') throw new RuntimeException('Choose a content type and enter a title.');
-    $data=['title'=>$title,'description'=>$desc,'excerpt'=>$desc,'caption'=>$desc,'slug'=>$slug!==''?$slug:trim(preg_replace('/[^a-z0-9]+/i','-',strtolower($title)),'-'),'event_date'=>$date,'date_label'=>$date,'year_label'=>$date!==''?substr($date,0,4):'','artist'=>$artist,'external_url'=>$url];
+    $existingData=[]; if($id>0){$old=$pdo->prepare('SELECT data_json FROM content_records WHERE id=?');$old->execute([$id]);$oldData=json_decode((string)($old->fetchColumn()?:'{}'),true);if(is_array($oldData))$existingData=$oldData;}\n    $data=array_replace($existingData,['title'=>$title,'description'=>$desc,'excerpt'=>$desc,'caption'=>$desc,'slug'=>$slug!==''?$slug:trim(preg_replace('/[^a-z0-9]+/i','-',strtolower($title)),'-'),'event_date'=>$date,'date_label'=>$date,'year_label'=>$date!==''?substr($date,0,4):'','artist'=>$artist,'external_url'=>$url];
     if($section==='journal') {$data['excerpt']=$desc;$data['category']=trim((string)($_POST['category']??'Journal'));$data['date_formatted']=$date!==''?$date:date('F j, Y');$data['reading_time_minutes']=max(1,(int)($_POST['reading_time']??3));$data['content']=trim((string)($_POST['body']??''));}
     if($section==='album') {$data['category']=trim((string)($_POST['category']??'Personal'));$data['created_date']=$date;$data['photo_count']=0;$data['editorial_intro']=$desc;}
     if($section==='photograph') {$data['alt_text']=$desc;$data['caption']=$desc;$data['album_slug']=trim((string)($_POST['album_slug']??''));}
@@ -50,7 +50,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     $image=$upload('image');if($image!==''){$data['featured_image']=$image;$data['cover_image']=$image;$data['file_path']=$image;$data['photograph_url']=$image;}
     $audio=$section==='song'?$upload('audio','audio'):'';if($audio!=='')$data['audio_url']=$audio;
     if($section==='photograph' && $image==='') throw new RuntimeException('Choose an image for this gallery photo.');
-    if($section==='song' && $url==='' && $audio==='') throw new RuntimeException('Add a music platform link or upload permitted audio.');
+    if($section==='song' && $url!=='' && !preg_match('#^https://#i',$url)) throw new RuntimeException('Music links must use HTTPS.');\n    if($section==='song' && $url==='' && $audio==='' && empty($existingData['audio_url'])) throw new RuntimeException('Add a music platform link or upload permitted audio.');
     if($section==='journal' && $data['content']==='') throw new RuntimeException('Add the article body.');
     $json=json_encode($data,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
     $published=$status==='published'?date('Y-m-d H:i:s'):null;

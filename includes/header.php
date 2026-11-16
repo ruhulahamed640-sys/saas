@@ -45,10 +45,17 @@ $canonical = 'https://ruhul.online/' . ($canonicalPath ?? '');
   <link rel="stylesheet" href="/assets/css/base.css">
   <link rel="stylesheet" href="/assets/css/components.css">
   <link rel="stylesheet" href="/assets/css/mobile.css">
+  <link rel="stylesheet" href="/assets/css/cursor-orbits.css">
   <script src="/assets/js/theme.js" defer></script>
   <script src="/assets/js/navigation.js" defer></script>
+  <script src="/assets/js/cursor-orbits.js" defer></script>
 </head>
 <body>
+  <div class="cursor-orbits" data-cursor-orbits aria-hidden="true">
+    <span class="cursor-orbits__ring"></span>
+    <span class="cursor-orbits__ring"></span>
+    <span class="cursor-orbits__ring"></span>
+  </div>
   <a href="#main-content" class="skip-link">Skip to content</a>
   <header class="site-header" role="banner">
     <div class="site-header__inner">

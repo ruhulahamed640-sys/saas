@@ -17,7 +17,7 @@ function get_ahamed_archive_data(): array {
         'posts'=>[], 'categories'=>[], 'albums'=>[], 'photographs'=>[],
         'memories'=>[], 'friends'=>[], 'events'=>[], 'places'=>[],
         'projects'=>[], 'timeline'=>[], 'guestbook'=>[], 'education'=>[],
-        'achievements'=>[], 'interests'=>[]
+        'achievements'=>[], 'interests'=>[], 'songs'=>[], 'birthdays'=>[]
     ];
 
     $pdo = Database::getConnection();
@@ -40,7 +40,7 @@ function get_ahamed_archive_data(): array {
         'photograph'=>'photographs', 'memory'=>'memories', 'friend'=>'friends',
         'event'=>'events', 'place'=>'places', 'project'=>'projects',
         'timeline'=>'timeline', 'guestbook'=>'guestbook', 'education'=>'education',
-        'achievement'=>'achievements', 'interest'=>'interests'
+        'achievement'=>'achievements', 'interest'=>'interests', 'song'=>'songs', 'birthday'=>'birthdays'
     ];
     foreach ($stmt->fetchAll() as $row) {
         $target = $sectionMap[$row['section']] ?? null;

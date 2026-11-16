@@ -14,6 +14,7 @@ class Auth {
                 'lifetime' => 0,
                 'path'     => '/',
                 'httponly' => true,
+                'secure'   => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
                 'samesite' => 'Lax',
             ]);
             session_start();

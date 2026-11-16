@@ -178,6 +178,9 @@ if ($method === 'POST' && $resource === 'guestbook') {
 // ADMIN ENDPOINTS (/api/v1/admin/...)
 if ($resource === 'admin') {
     Auth::requireAdminApi();
+    if (in_array($method, ['POST','PUT','PATCH','DELETE'], true) && !Auth::verifyCsrfToken($_SERVER['HTTP_X_CSRF_TOKEN'] ?? $_POST['csrf_token'] ?? null)) {
+        json_response(['status'=>'error','message'=>'CSRF validation failed.'],403);
+    }
     $adminModule = $param1 ?? 'posts';
     $recordId    = $param2 !== null ? (int)$param2 : null;
     $input       = json_decode(file_get_contents('php://input') ?: '{}', true) ?: $_POST;

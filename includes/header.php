@@ -81,7 +81,6 @@ $canonical = 'https://ruhul.online/' . ($canonicalPath ?? '');
       </nav>
       <div class="header-actions">
         <button type="button" class="btn-editorial btn-editorial--outline" data-theme-toggle aria-label="Toggle colour theme"><span data-theme-label>Deep Ink</span></button>
-        <a href="/admin/" class="btn-editorial admin-link">CMS Admin</a>
       </div>
     </div>
   </header>

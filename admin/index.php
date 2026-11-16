@@ -167,7 +167,8 @@ $recent = $pdo->query('SELECT id,section,title,status,visibility,created_at FROM
 <form method="post" enctype="multipart/form-data" class="admin-form">
 <input type="hidden" name="csrf_token" value="<?= $csrf ?>"><input type="hidden" name="action" value="hero_upload">
 <input type="hidden" name="MAX_FILE_SIZE" value="6291456">
-<label class="wide">Choose new hero image (PNG or WebP, maximum 6 MB)<input type="file" name="hero_image" accept="image/png,image/webp" required></label>
+<label class="wide">Choose new hero image (transparent PNG or WebP, maximum 6 MB)<input id="hero-image-file" type="file" name="hero_image" accept="image/png,image/webp" required></label>
+<div class="wide"><p class="meta-label">SELECTED IMAGE PREVIEW</p><img id="hero-image-preview" alt="Selected hero image preview" hidden style="display:none;max-width:260px;max-height:280px;object-fit:contain;background:#111;padding:12px"></div>
 <div class="wide hero-admin-actions"><button class="btn-editorial" type="submit">Upload and activate</button></div>
 </form>
 <form method="post" class="hero-toggle">
@@ -190,4 +191,29 @@ $recent = $pdo->query('SELECT id,section,title,status,visibility,created_at FROM
 <p class="wide" style="font-size:13px;color:var(--text-secondary)">Enter the fields required by the selected page, for example: excerpt, category, featured_image, date_formatted, reading_time_minutes and content for a journal entry. No demo records are preloaded.</p>
 <button class="btn-editorial wide" type="submit">Save real content</button></form></section>
 <section class="admin-panel"><p class="meta-label">RECENT RECORDS</p><h2 class="h3" style="margin:8px 0 16px">Content archive</h2><div class="table-scroll"><table class="admin-table"><thead><tr><th>Type</th><th>Title</th><th>Status</th><th>Visibility</th><th>Created</th></tr></thead><tbody><?php foreach($recent as $row): ?><tr><td><?= htmlspecialchars($row['section']) ?></td><td><?= htmlspecialchars($row['title'] ?? '') ?></td><td><?= htmlspecialchars($row['status']) ?></td><td><?= htmlspecialchars($row['visibility']) ?></td><td><?= htmlspecialchars($row['created_at']) ?></td></tr><?php endforeach; ?><?php if(!$recent): ?><tr><td colspan="5">No content has been entered yet.</td></tr><?php endif; ?></tbody></table></div></section>
-</main></body></html>
+</main>
+<script>
+(() => {
+  const input = document.getElementById('hero-image-file');
+  const preview = document.getElementById('hero-image-preview');
+  let previewUrl = null;
+  if (!input || !preview) return;
+  input.addEventListener('change', () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    const file = input.files && input.files[0];
+    if (!file) { preview.removeAttribute('src'); preview.hidden = true; preview.style.display = 'none'; return; }
+    if (!['image/png', 'image/webp'].includes(file.type) || file.size > 6 * 1024 * 1024) {
+      input.value = '';
+      preview.removeAttribute('src'); preview.hidden = true; preview.style.display = 'none';
+      alert('Choose a PNG or WebP image smaller than 6 MB.');
+      return;
+    }
+    previewUrl = URL.createObjectURL(file);
+    preview.src = previewUrl;
+    preview.hidden = false;
+    preview.style.display = 'block';
+  });
+  window.addEventListener('beforeunload', () => { if (previewUrl) URL.revokeObjectURL(previewUrl); });
+})();
+</script>
+</body></html>

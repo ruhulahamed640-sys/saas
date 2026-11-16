@@ -24,11 +24,14 @@ declare(strict_types=1);
             <li><a href="gallery.php">05. Photo Gallery</a></li>
             <li><a href="memories.php">06. Memories</a></li>
             <li><a href="friends.php">07. Friends</a></li>
-            <li><a href="events.php">08. Birthday &amp; Events</a></li>
-            <li><a href="places.php">09. Places &amp; Travel</a></li>
-            <li><a href="portfolio.php">10. Portfolio</a></li>
-            <li><a href="guestbook.php">11. Guestbook</a></li>
-            <li><a href="admin/index.php">12. CMS Dashboard</a></li>
+            <li><a href="events.php">08. Events</a></li>
+            <li><a href="calendar.php">09. Life Calendar</a></li>
+            <li><a href="birthdays.php">10. Birthday Archive</a></li>
+            <li><a href="music.php">11. Favourite Music</a></li>
+            <li><a href="places.php">12. Places &amp; Travel</a></li>
+            <li><a href="portfolio.php">13. Portfolio</a></li>
+            <li><a href="guestbook.php">14. Guestbook</a></li>
+            <li><a href="/admin/login.php">15. Admin Login</a></li>
           </ul>
         </div>
         <div style="grid-column: span 3;">

@@ -61,7 +61,7 @@ $canonical = 'https://ruhul.online/' . ($canonicalPath ?? '');
     <div class="site-header__inner">
       <a href="/" class="site-wordmark" aria-label="Ahamed Drafted Home">AHAMED DRAFTED</a>
       <button class="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation" data-menu-toggle>
-        <span class="menu-toggle-label">Menu</span><span aria-hidden="true">☰</span>
+        <span class="menu-toggle-label">Menu</span><span class="menu-toggle-icon" aria-hidden="true"><span></span><span></span><span></span></span>
       </button>
       <nav class="site-nav" id="primary-navigation" aria-label="Primary Editorial Navigation">
         <a href="/" class="site-nav__link <?= $activeNav === 'home' ? 'is-active' : '' ?>">Home</a>

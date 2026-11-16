@@ -54,10 +54,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     if($section==='journal') {$data['excerpt']=$desc;$data['category']=trim((string)($_POST['category']??'Journal'));$data['date_formatted']=$date!==''?$date:date('F j, Y');$data['reading_time_minutes']=max(1,(int)($_POST['reading_time']??3));$data['content']=trim((string)($_POST['body']??''));}
     if($section==='album') {$data['category']=trim((string)($_POST['category']??'Personal'));$data['created_date']=$date;$data['editorial_intro']=$desc;}
     if($section==='photograph') {$data['alt_text']=$desc;$data['caption']=$desc;$data['album_slug']=trim((string)($_POST['album_slug']??''));}
+    if($section==='friend')$data['consent_approved']=isset($_POST['consent_approved']);
     if($section==='memory'||$section==='birthday') {$data['location_approx']=trim((string)($_POST['location']??''));$data['category']=$section==='birthday'?'Birthday':'Memory';$data['date_label']=$date;}
     if($section==='song') {if($artist!=='')$data['artist']=$artist;if($url!=='')$data['external_url']=$url;}
     $image=$upload('image');if($image!==''){$data['featured_image']=$image;$data['cover_image']=$image;$data['file_path']=$image;$data['photograph_url']=$image;}
     $audio=$section==='song'?$upload('audio','audio'):'';if($audio!=='')$data['audio_url']=$audio;
+    if($section==='friend' && $image!=='')$data['portrait_url']=$image;
     if($section==='photograph' && $image==='') throw new RuntimeException('Choose an image for this gallery photo.');
     if($section==='song' && $url!=='' && !preg_match('#^https://#i',$url)) throw new RuntimeException('Music links must use HTTPS.');
     if($section==='guestbook') {$data['visitor_name']=$title;$data['message']=$desc;$data['moderation_status']=$status==='published'?'approved':'pending';}
@@ -117,6 +119,7 @@ table{border-collapse:separate;border-spacing:0}th{font-size:10px;text-transform
 <label>Category / album type<input name="category" value="<?=htmlspecialchars($editData['category']??'')?>"></label><label>Artist (music)<input name="artist" value="<?=htmlspecialchars($editData['artist']??'')?>"></label>
 <label class="wide">Description / caption<textarea name="description" rows="3"><?=htmlspecialchars($editData['description']??$editData['excerpt']??$editData['caption']??'')?></textarea></label>
 <label>Photo upload (JPG/PNG/WebP/GIF, max 8 MB)<input type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif"></label>
+<label><span>Friend profile consent approved</span><input type="checkbox" name="consent_approved" value="1" <?=!empty($editData['consent_approved'])?'checked':''?>></label>
 <label>Audio upload (MP3/M4A/OGG/WAV/WebM, max 15 MB)<input type="file" name="audio" accept="audio/*"></label>
 <label class="wide">Music platform URL (YouTube / Spotify etc.)<input type="url" name="external_url" value="<?=htmlspecialchars($editData['external_url']??'')?>"></label>
 <label class="wide">Article body<textarea name="body" rows="7"><?=htmlspecialchars($editData['content']??'')?></textarea></label>

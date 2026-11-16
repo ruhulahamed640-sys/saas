@@ -97,7 +97,7 @@ if ($method === 'GET') {
             }
             foreach ($data['albums'] as $album) {
                 if (($album['slug'] === $param1 || (string)$album['id'] === $param1) && Auth::canViewRecord($album)) {
-                    $photos = array_values(array_filter($data['photographs'], fn($ph) => (int)$ph['album_id'] === (int)$album['id']));
+                    $photos = array_values(array_filter($data['photographs'], fn($ph) => ($ph['album_slug'] ?? '') === ($album['slug'] ?? '')));
                     $album['photographs'] = $photos;
                     json_response(['status' => 'ok', 'data' => $album]);
                 }

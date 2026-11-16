@@ -50,7 +50,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     if(isset($_POST['role_label']) && trim((string)$_POST['role_label'])!==''){$role=trim((string)$_POST['role_label']);$data['role']=$role;$data['status_label']=$role;$data['tier_label']=$role;}
     if(isset($_POST['coordinates']))$data['approx_coordinates']=trim((string)$_POST['coordinates']);
     if(isset($_POST['period_label'])){$period=trim((string)$_POST['period_label']);$data['visit_period']=$period;$data['known_since']=$period;$data['period_label']=$period;}
-    if(isset($_POST['notes'])){$notes=trim((string)$_POST['notes']);$data['full_notes']=$notes;$data['shared_memory']=$notes;}
+    if(isset($_POST['notes'])){$notes=trim((string)$_POST['notes']);$data['full_notes']=$notes;$data['shared_memory']=$notes;$data['summary']=$notes;}
+    if(isset($_POST['role_label']) && trim((string)$_POST['role_label'])!=='')$data['role']=trim((string)$_POST['role_label']);
     if($section==='journal') {$data['excerpt']=$desc;$data['category']=trim((string)($_POST['category']??'Journal'));$data['date_formatted']=$date!==''?$date:date('F j, Y');$data['reading_time_minutes']=max(1,(int)($_POST['reading_time']??3));$data['content']=trim((string)($_POST['body']??''));}
     if($section==='album') {$data['category']=trim((string)($_POST['category']??'Personal'));$data['created_date']=$date;$data['editorial_intro']=$desc;}
     if($section==='photograph') {$data['alt_text']=$desc;$data['caption']=$desc;$data['album_slug']=trim((string)($_POST['album_slug']??''));}

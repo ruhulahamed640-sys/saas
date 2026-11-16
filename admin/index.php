@@ -15,13 +15,13 @@ $saveProfile=static function(array $data) use($pdo):void {$s=$pdo->prepare("INSE
 $upload=static function(string $field,string $kind='image'):string {
  if(empty($_FILES[$field]) || $_FILES[$field]['error']===UPLOAD_ERR_NO_FILE) return '';
  $f=$_FILES[$field]; if($f['error']!==UPLOAD_ERR_OK || !is_uploaded_file($f['tmp_name']) || $f['size']<1) throw new RuntimeException('Upload failed. Select a valid file.');
- $map=$kind==='audio'?['audio/mpeg'=>'mp3','audio/mp4'=>'m4a','audio/ogg'=>'ogg','audio/wav'=>'wav','audio/x-wav'=>'wav','audio/webm'=>'webm']:['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp','image/gif'=>'gif'];
+ $map=$kind==='audio'?['audio/mpeg'=>'mp3','audio/mp4'=>'m4a','audio/ogg'=>'ogg','audio/wav'=>'wav','audio/x-wav'=>'wav','audio/webm'=>'webm']:($kind==='hero'?['image/png'=>'png','image/webp'=>'webp']:['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp','image/gif'=>'gif']);
  $max=$kind==='audio'?15*1024*1024:8*1024*1024; if($f['size']>$max) throw new RuntimeException($kind==='audio'?'Audio limit is 15 MB.':'Image limit is 8 MB.');
  $mime=(new finfo(FILEINFO_MIME_TYPE))->file($f['tmp_name']); if(!isset($map[$mime])) throw new RuntimeException('Unsupported '.$kind.' format.');
  if($kind==='image' && !@getimagesize($f['tmp_name'])) throw new RuntimeException('Invalid image file.');
- $dir=dirname(__DIR__).'/uploads/'.$kind.'s'; if(!is_dir($dir) && !mkdir($dir,0755,true) && !is_dir($dir)) throw new RuntimeException('Upload folder is unavailable.');
+ $dir=dirname(__DIR__).'/uploads/'.($kind==='hero'?'hero':$kind.'s'); if(!is_dir($dir) && !mkdir($dir,0755,true) && !is_dir($dir)) throw new RuntimeException('Upload folder is unavailable.');
  $name=bin2hex(random_bytes(16)).'.'.$map[$mime]; if(!move_uploaded_file($f['tmp_name'],$dir.'/'.$name)) throw new RuntimeException('Could not save uploaded file.');
- return '/uploads/'.$kind.'s/'.$name;
+ return '/uploads/'.($kind==='hero'?'hero':$kind.'s').'/'.$name;
 };
 if($_SERVER['REQUEST_METHOD']==='POST'){
  if(!Auth::verifyCsrfToken($_POST['csrf_token']??null)) $err='Session validation failed. Refresh and try again.';
@@ -33,7 +33,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     $profile['show_journal_section']=isset($_POST['show_journal_section'])?'1':'0';
     $profile['show_portfolio_section']=isset($_POST['show_portfolio_section'])?'1':'0';
     if(!empty($_POST['clear_hero'])) {$old=(string)($profile['hero_image']??''); if(preg_match('#^/uploads/hero/[A-Za-z0-9_-]+\.(?:png|webp)$#',$old)) @unlink(dirname(__DIR__).$old); $profile['hero_image']='';}
-    $img=$upload('hero_image'); if($img!=='') {$profile['hero_image']=$img;$profile['hero_image_enabled']='1';}
+    $img=$upload('hero_image','hero'); if($img!=='') {$profile['hero_image']=$img;$profile['hero_image_enabled']='1';}
     $profile['hero_image_enabled']=isset($_POST['hero_image_enabled'])?'1':'0';
     $saveProfile($profile); $msg='Homepage settings saved.';
    } elseif($action==='delete'){
@@ -109,7 +109,7 @@ table{border-collapse:separate;border-spacing:0}th{font-size:10px;text-transform
 <section class="panel" id="home"><p class="meta-label">HOMEPAGE BUILDER</p><h2 class="h3">Homepage presentation</h2><p class="muted">Edit the hero copy, biography and portrait without changing existing profile settings.</p>
 <?php if(!empty($profile['hero_image'])):?><img class="preview" src="<?=htmlspecialchars($profile['hero_image'])?>" alt="Current hero image"><?php endif;?>
 <form class="form" method="post" enctype="multipart/form-data"><input type="hidden" name="csrf_token" value="<?=$csrf?>"><input type="hidden" name="action" value="save_home">
-<label>Site tagline<input name="tagline" value="<?=htmlspecialchars($profile['tagline']??'')?>"></label><label>Short bio<input name="short_bio" value="<?=htmlspecialchars($profile['short_bio']??'')?>"></label><label class="wide">Hero headline<input name="hero_headline" value="<?=htmlspecialchars($profile['hero_headline']??'')?>"></label><label class="wide">Hero supporting text<textarea name="hero_supporting" rows="2"><?=htmlspecialchars($profile['hero_supporting']??'')?></textarea></label><label class="wide">Full biography<textarea name="full_biography" rows="5"><?=htmlspecialchars($profile['full_biography']??'')?></textarea></label><label>Hero portrait (PNG/JPG/WebP, max 8 MB)<input type="file" name="hero_image" accept="image/jpeg,image/png,image/webp"></label><label>Image alt text<input name="hero_image_alt" value="<?=htmlspecialchars($profile['hero_image_alt']??'')?>"></label><label><span>Show hero portrait</span><input type="checkbox" name="hero_image_enabled" value="1" <?=($profile['hero_image_enabled']??'1')==='1'?'checked':''?>></label><label><span>Remove current portrait</span><input type="checkbox" name="clear_hero" value="1"></label>
+<label>Site tagline<input name="tagline" value="<?=htmlspecialchars($profile['tagline']??'')?>"></label><label>Short bio<input name="short_bio" value="<?=htmlspecialchars($profile['short_bio']??'')?>"></label><label class="wide">Hero headline<input name="hero_headline" value="<?=htmlspecialchars($profile['hero_headline']??'')?>"></label><label class="wide">Hero supporting text<textarea name="hero_supporting" rows="2"><?=htmlspecialchars($profile['hero_supporting']??'')?></textarea></label><label class="wide">Full biography<textarea name="full_biography" rows="5"><?=htmlspecialchars($profile['full_biography']??'')?></textarea></label><label>Hero portrait (PNG/JPG/WebP, max 8 MB)<input type="file" name="hero_image" accept="image/png,image/webp"></label><label>Image alt text<input name="hero_image_alt" value="<?=htmlspecialchars($profile['hero_image_alt']??'')?>"></label><label><span>Show hero portrait</span><input type="checkbox" name="hero_image_enabled" value="1" <?=($profile['hero_image_enabled']??'1')==='1'?'checked':''?>></label><label><span>Remove current portrait</span><input type="checkbox" name="clear_hero" value="1"></label>
 <label><span>Show Journal section on homepage</span><input type="checkbox" name="show_journal_section" value="1" <?=($profile['show_journal_section']??'1')==='1'?'checked':''?>></label>
 <label><span>Show Portfolio section on homepage</span><input type="checkbox" name="show_portfolio_section" value="1" <?=($profile['show_portfolio_section']??'1')==='1'?'checked':''?>></label><button class="btn-editorial wide">Save homepage settings</button></form></section>
 <section class="panel" id="editor"><p class="meta-label">CONTENT STUDIO</p><h2 class="h3"><?=$edit?'Edit content':'Create content'?></h2><p class="muted">Upload images for gallery, memories, birthdays, events and posts. Music accepts an external listening link or an audio file you own or are authorised to upload.</p>

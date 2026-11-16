@@ -1,11 +1,10 @@
-/* Global cursor-reactive editorial orbit decoration */
+/* Global gradient-outline circles for the dark editorial theme */
 .cursor-orbits {
   position: fixed;
   inset: 0;
   z-index: 1;
   overflow: hidden;
   pointer-events: none;
-  color: #FFFFFF;
   opacity: 1;
 }
 .cursor-orbits__ring {
@@ -13,9 +12,27 @@
   display: block;
   width: clamp(280px, 38vw, 620px);
   aspect-ratio: 1;
-  border: 1.5px solid currentColor;
+  border: 0;
   border-radius: 50%;
-  opacity: .32;
+  background: linear-gradient(
+    135deg,
+    rgba(255,255,255,.78) 0%,
+    rgba(174,155,255,.62) 28%,
+    rgba(116,205,220,.46) 52%,
+    rgba(255,255,255,.12) 76%,
+    rgba(194,160,255,.55) 100%
+  );
+  -webkit-mask: radial-gradient(
+    closest-side,
+    transparent calc(100% - 1.5px),
+    #000 calc(100% - .75px)
+  );
+  mask: radial-gradient(
+    closest-side,
+    transparent calc(100% - 1.5px),
+    #000 calc(100% - .75px)
+  );
+  opacity: .58;
   transform: translate3d(0,0,0);
   will-change: transform;
 }
@@ -23,22 +40,35 @@
   width: clamp(340px, 45vw, 720px);
   top: 8%;
   right: -15%;
-  opacity: .38;
+  opacity: .68;
+  background: linear-gradient(135deg,
+    rgba(255,255,255,.9),
+    rgba(174,155,255,.68) 35%,
+    rgba(116,205,220,.42) 68%,
+    rgba(255,255,255,.16));
 }
 .cursor-orbits__ring:nth-child(2) {
   width: clamp(260px, 32vw, 520px);
   top: 38%;
   left: -13%;
-  opacity: .28;
+  opacity: .5;
+  background: linear-gradient(145deg,
+    rgba(116,205,220,.62),
+    rgba(255,255,255,.7) 42%,
+    rgba(194,160,255,.52));
 }
 .cursor-orbits__ring:nth-child(3) {
   width: clamp(190px, 24vw, 390px);
   bottom: -14%;
   right: 12%;
-  opacity: .24;
+  opacity: .42;
+  background: linear-gradient(120deg,
+    rgba(194,160,255,.7),
+    rgba(255,255,255,.5) 50%,
+    rgba(116,205,220,.45));
 }
 
-/* Keep the decoration above the page background but below all page content. */
+/* Keep circles above the page background and below content/navigation. */
 .site-header {
   position: sticky;
   top: 0;

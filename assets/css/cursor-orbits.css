@@ -2,12 +2,11 @@
 .cursor-orbits {
   position: fixed;
   inset: 0;
-  z-index: 2;
+  z-index: 1;
   overflow: hidden;
   pointer-events: none;
   color: #FFFFFF;
   opacity: 1;
-  isolation: isolate;
 }
 .cursor-orbits__ring {
   position: absolute;
@@ -16,30 +15,41 @@
   aspect-ratio: 1;
   border: 1.5px solid currentColor;
   border-radius: 50%;
-  opacity: .30;
+  opacity: .32;
   transform: translate3d(0,0,0);
   will-change: transform;
-  box-shadow: 0 0 1px rgba(255,255,255,.12);
 }
 .cursor-orbits__ring:nth-child(1) {
   width: clamp(340px, 45vw, 720px);
   top: 8%;
   right: -15%;
-  opacity: .34;
+  opacity: .38;
 }
 .cursor-orbits__ring:nth-child(2) {
   width: clamp(260px, 32vw, 520px);
   top: 38%;
   left: -13%;
-  opacity: .25;
+  opacity: .28;
 }
 .cursor-orbits__ring:nth-child(3) {
   width: clamp(190px, 24vw, 390px);
   bottom: -14%;
   right: 12%;
-  opacity: .22;
+  opacity: .24;
 }
-.site-header { position: sticky; z-index: 100; }
+
+/* Keep the decoration above the page background but below all page content. */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.editorial-shell {
+  position: relative;
+  z-index: 2;
+  background: transparent;
+}
+
 @media (max-width: 760px) {
   .cursor-orbits { opacity: .72; }
   .cursor-orbits__ring:nth-child(1) { right: -38%; top: 12%; }

@@ -2,218 +2,95 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../config/archive.php';
-
 use AhamedDrafted\Config\Auth;
 Auth::startSession();
 $pdo = \AhamedDrafted\Config\Database::getConnection();
-
-if (empty($_SESSION['user_id']) || !in_array($_SESSION['user_role'] ?? '', ['owner','editor'], true)) {
-    header('Location: login.php'); exit;
-}
-
-$allowed = ['journal','category','album','photograph','memory','friend','event','place','project','timeline','guestbook','education','achievement','interest'];
-$message = '';
-$error = '';
-
-$profileRow = $pdo->prepare("SELECT setting_value FROM site_settings WHERE setting_key = 'profile' LIMIT 1");
-$profileRow->execute();
-$profileData = json_decode((string)($profileRow->fetchColumn() ?: '{}'), true);
-$profileData = is_array($profileData) ? $profileData : [];
-$heroImage = (string)($profileData['hero_image'] ?? '');
-$heroEnabled = (string)($profileData['hero_image_enabled'] ?? '1') === '1';
-
-$saveProfile = static function (PDO $pdo, array $profile): void {
-    $stmt = $pdo->prepare(
-        "INSERT INTO site_settings (setting_key, setting_value) VALUES ('profile', ?)
-         ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)"
-    );
-    $stmt->execute([json_encode($profile, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR)]);
+if (empty($_SESSION['user_id']) || !in_array($_SESSION['user_role'] ?? '', ['owner','editor'], true)) { header('Location: login.php'); exit; }
+$types = ['journal'=>'Journal post','album'=>'Gallery album','photograph'=>'Gallery photo','memory'=>'Memory','event'=>'Event','timeline'=>'Life timeline','birthday'=>'Birthday memory','song'=>'Favourite song','project'=>'Project','place'=>'Place','friend'=>'Friend','education'=>'Education','achievement'=>'Achievement','interest'=>'Interest','category'=>'Category'];
+$csrf = htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES, 'UTF-8');
+$msg=''; $err='';
+$profileStmt=$pdo->prepare("SELECT setting_value FROM site_settings WHERE setting_key='profile' LIMIT 1"); $profileStmt->execute();
+$profile=json_decode((string)($profileStmt->fetchColumn() ?: '{}'),true); if(!is_array($profile)) $profile=[];
+$saveProfile=static function(array $data) use($pdo):void {$s=$pdo->prepare("INSERT INTO site_settings(setting_key,setting_value) VALUES('profile',?) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)");$s->execute([json_encode($data,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR)]);};
+$upload=static function(string $field,string $kind='image'):string {
+ if(empty($_FILES[$field]) || $_FILES[$field]['error']===UPLOAD_ERR_NO_FILE) return '';
+ $f=$_FILES[$field]; if($f['error']!==UPLOAD_ERR_OK || !is_uploaded_file($f['tmp_name']) || $f['size']<1) throw new RuntimeException('Upload failed. Select a valid file.');
+ $map=$kind==='audio'?['audio/mpeg'=>'mp3','audio/mp4'=>'m4a','audio/ogg'=>'ogg','audio/wav'=>'wav','audio/x-wav'=>'wav','audio/webm'=>'webm']:['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp','image/gif'=>'gif'];
+ $max=$kind==='audio'?15*1024*1024:8*1024*1024; if($f['size']>$max) throw new RuntimeException($kind==='audio'?'Audio limit is 15 MB.':'Image limit is 8 MB.');
+ $mime=(new finfo(FILEINFO_MIME_TYPE))->file($f['tmp_name']); if(!isset($map[$mime])) throw new RuntimeException('Unsupported '.$kind.' format.');
+ if($kind==='image' && !@getimagesize($f['tmp_name'])) throw new RuntimeException('Invalid image file.');
+ $dir=dirname(__DIR__).'/uploads/'.$kind.'s'; if(!is_dir($dir) && !mkdir($dir,0755,true) && !is_dir($dir)) throw new RuntimeException('Upload folder is unavailable.');
+ $name=bin2hex(random_bytes(16)).'.'.$map[$mime]; if(!move_uploaded_file($f['tmp_name'],$dir.'/'.$name)) throw new RuntimeException('Could not save uploaded file.');
+ return '/uploads/'.$kind.'s/'.$name;
 };
-
-$deleteManagedHero = static function (string $path): void {
-    if (!preg_match('#^/uploads/hero/[A-Za-z0-9_-]+\.(?:png|webp)$#i', $path)) return;
-    $file = dirname(__DIR__) . $path;
-    $base = realpath(dirname(__DIR__) . '/uploads/hero');
-    $real = realpath($file);
-    if ($base !== false && $real !== false && str_starts_with($real, $base . DIRECTORY_SEPARATOR) && is_file($real)) {
-        @unlink($real);
-    }
-};
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!Auth::verifyCsrfToken($_POST['csrf_token'] ?? null)) {
-        $error = 'Session validation failed. Refresh and try again.';
-    } else {
-        $action = (string)($_POST['action'] ?? '');
-        if ($action === 'hero_upload') {
-            $file = $_FILES['hero_image'] ?? null;
-            if (!$file || !isset($file['error']) || $file['error'] !== UPLOAD_ERR_OK) {
-                $error = 'Choose a valid PNG or WebP image to upload.';
-            } elseif ((int)$file['size'] < 1 || (int)$file['size'] > 6 * 1024 * 1024 || !is_uploaded_file($file['tmp_name'])) {
-                $error = 'Image must be smaller than 6 MB.';
-            } else {
-                $finfo = new finfo(FILEINFO_MIME_TYPE);
-                $mime = $finfo->file($file['tmp_name']);
-                $imageInfo = @getimagesize($file['tmp_name']);
-                $extensions = ['image/png' => 'png', 'image/webp' => 'webp'];
-                if (!isset($extensions[$mime]) || !$imageInfo || (int)$imageInfo[0] > 8000 || (int)$imageInfo[1] > 8000) {
-                    $error = 'Only valid PNG and WebP images up to 8000 × 8000 pixels are accepted.';
-                } else {
-                    $uploadDir = dirname(__DIR__) . '/uploads/hero';
-                    if (!is_dir($uploadDir) && !@mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
-                        $error = 'Upload directory is unavailable. Check hosting folder permissions.';
-                    } else {
-                        $filename = bin2hex(random_bytes(18)) . '.' . $extensions[$mime];
-                        $destination = $uploadDir . '/' . $filename;
-                        $newPath = '/uploads/hero/' . $filename;
-                        if (!move_uploaded_file($file['tmp_name'], $destination)) {
-                            $error = 'The image could not be saved. Check upload folder permissions.';
-                        } else {
-                            try {
-                                $oldPath = (string)($profileData['hero_image'] ?? '');
-                                $profileData['hero_image'] = $newPath;
-                                $profileData['hero_image_enabled'] = '1';
-                                $saveProfile($pdo, $profileData);
-                                if ($oldPath !== '' && $oldPath !== $newPath) $deleteManagedHero($oldPath);
-                                $heroImage = $newPath;
-                                $heroEnabled = true;
-                                $message = 'Hero image uploaded and activated successfully.';
-                            } catch (Throwable $e) {
-                                @unlink($destination);
-                                error_log('Hero image setting save failed: ' . $e->getMessage());
-                                $error = 'Image upload could not be completed. Please try again.';
-                            }
-                        }
-                    }
-                }
-            }
-        } elseif ($action === 'hero_remove') {
-            $oldPath = (string)($profileData['hero_image'] ?? '');
-            try {
-                $profileData['hero_image'] = '';
-                $profileData['hero_image_enabled'] = '0';
-                $saveProfile($pdo, $profileData);
-                if ($oldPath !== '') $deleteManagedHero($oldPath);
-                $heroImage = '';
-                $heroEnabled = false;
-                $message = 'Hero image removed.';
-            } catch (Throwable $e) {
-                error_log('Hero image removal failed: ' . $e->getMessage());
-                $error = 'The hero image could not be removed. Please try again.';
-            }
-        } elseif ($action === 'hero_toggle') {
-            $heroEnabled = ($_POST['hero_image_enabled'] ?? '') === '1';
-            $profileData['hero_image_enabled'] = $heroEnabled ? '1' : '0';
-            try {
-                $saveProfile($pdo, $profileData);
-                $message = $heroEnabled ? 'Hero image enabled.' : 'Hero image disabled.';
-            } catch (Throwable $e) {
-                error_log('Hero image toggle failed: ' . $e->getMessage());
-                $error = 'The display setting could not be saved.';
-            }
-        } else {
-            $section = (string)($_POST['section'] ?? '');
-            $title = trim((string)($_POST['title'] ?? ''));
-            $slug = trim((string)($_POST['slug'] ?? ''));
-            $json = trim((string)($_POST['data_json'] ?? '{}'));
-            $visibility = ($_POST['visibility'] ?? 'private') === 'public' ? 'public' : 'private';
-            $status = in_array($_POST['status'] ?? '', ['draft','published','pending','archived'], true) ? $_POST['status'] : 'draft';
-            $decoded = json_decode($json, true);
-            if (!in_array($section, $allowed, true) || $title === '' || !is_array($decoded)) {
-                $error = 'Choose a valid content type, enter a title, and provide valid JSON content.';
-            } else {
-                $decoded['title'] = $decoded['title'] ?? $title;
-                if ($slug !== '') $decoded['slug'] = $slug;
-                $stmt = $pdo->prepare('INSERT INTO content_records (section, slug, title, data_json, visibility, status, published_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
-                $stmt->execute([$section, $slug !== '' ? $slug : null, $title, json_encode($decoded, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES), $visibility, $status, $status === 'published' ? date('Y-m-d H:i:s') : null]);
-                $message = 'Content record saved.';
-            }
-        }
-    }
+if($_SERVER['REQUEST_METHOD']==='POST'){
+ if(!Auth::verifyCsrfToken($_POST['csrf_token']??null)) $err='Session validation failed. Refresh and try again.';
+ else {
+  $action=(string)($_POST['action']??'');
+  try {
+   if($action==='save_home'){
+    foreach(['tagline','short_bio','hero_headline','hero_supporting','hero_image_alt','full_biography'] as $k) $profile[$k]=trim((string)($_POST[$k]??''));
+    if(!empty($_POST['clear_hero'])) {$old=(string)($profile['hero_image']??''); if(preg_match('#^/uploads/hero/[A-Za-z0-9_-]+\.(?:png|webp)$#',$old)) @unlink(dirname(__DIR__).$old); $profile['hero_image']='';}
+    $img=$upload('hero_image'); if($img!=='') {$profile['hero_image']=$img;$profile['hero_image_enabled']='1';}
+    $profile['hero_image_enabled']=isset($_POST['hero_image_enabled'])?'1':'0';
+    $saveProfile($profile); $msg='Homepage settings saved.';
+   } elseif($action==='delete'){
+    $id=(int)($_POST['id']??0); $s=$pdo->prepare('DELETE FROM content_records WHERE id=?');$s->execute([$id]);$msg='Content record deleted.';
+   } elseif($action==='save_record'){
+    $id=(int)($_POST['id']??0);$section=(string)($_POST['section']??'');$title=trim((string)($_POST['title']??''));$slug=trim((string)($_POST['slug']??''));$desc=trim((string)($_POST['description']??''));$date=trim((string)($_POST['event_date']??''));$artist=trim((string)($_POST['artist']??''));$url=trim((string)($_POST['external_url']??''));$visibility=($_POST['visibility']??'public')==='private'?'private':'public';$status=in_array($_POST['status']??'',['draft','published','pending','archived'],true)?$_POST['status']:'draft';
+    if(!isset($types[$section])||$title==='') throw new RuntimeException('Choose a content type and enter a title.');
+    $data=['title'=>$title,'description'=>$desc,'excerpt'=>$desc,'caption'=>$desc,'slug'=>$slug!==''?$slug:trim(preg_replace('/[^a-z0-9]+/i','-',strtolower($title)),'-'),'event_date'=>$date,'date_label'=>$date,'year_label'=>$date!==''?substr($date,0,4):'','artist'=>$artist,'external_url'=>$url];
+    if($section==='journal') {$data['excerpt']=$desc;$data['category']=trim((string)($_POST['category']??'Journal'));$data['date_formatted']=$date!==''?$date:date('F j, Y');$data['reading_time_minutes']=max(1,(int)($_POST['reading_time']??3));$data['content']=trim((string)($_POST['body']??''));}
+    if($section==='album') {$data['category']=trim((string)($_POST['category']??'Personal'));$data['created_date']=$date;$data['photo_count']=0;$data['editorial_intro']=$desc;}
+    if($section==='photograph') {$data['alt_text']=$desc;$data['caption']=$desc;$data['album_slug']=trim((string)($_POST['album_slug']??''));}
+    if($section==='memory'||$section==='birthday') {$data['photograph_url']='';$data['location_approx']=trim((string)($_POST['location']??''));$data['category']=$section==='birthday'?'Birthday':'Memory';$data['date_label']=$date;}
+    if($section==='song') {$data['artist']=$artist;$data['external_url']=$url;$data['audio_url']='';}
+    $image=$upload('image');if($image!==''){$data['featured_image']=$image;$data['cover_image']=$image;$data['file_path']=$image;$data['photograph_url']=$image;}
+    $audio=$section==='song'?$upload('audio','audio'):'';if($audio!=='')$data['audio_url']=$audio;
+    if($section==='photograph' && $image==='') throw new RuntimeException('Choose an image for this gallery photo.');
+    if($section==='song' && $url==='' && $audio==='') throw new RuntimeException('Add a music platform link or upload permitted audio.');
+    if($section==='journal' && $data['content']==='') throw new RuntimeException('Add the article body.');
+    $json=json_encode($data,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
+    $published=$status==='published'?date('Y-m-d H:i:s'):null;
+    if($id>0){$s=$pdo->prepare('UPDATE content_records SET section=?,slug=?,title=?,data_json=?,visibility=?,status=?,published_at=? WHERE id=?');$s->execute([$section,$data['slug'],$title,$json,$visibility,$status,$published,$id]);}
+    else {$s=$pdo->prepare('INSERT INTO content_records(section,slug,title,data_json,visibility,status,published_at) VALUES(?,?,?,?,?,?,?)');$s->execute([$section,$data['slug'],$title,$json,$visibility,$status,$published]);}
+    $msg=$id>0?'Content updated.':'Content published/saved.';
+   }
+  } catch(Throwable $e){$err=$e instanceof RuntimeException?$e->getMessage():'Could not save changes. Check server logs.';if(!$e instanceof RuntimeException)error_log('CMS error: '.$e->getMessage());}
+ }
 }
-
-$profileRow = $pdo->prepare("SELECT setting_value FROM site_settings WHERE setting_key = 'profile' LIMIT 1");
-$profileRow->execute();
-$profileData = json_decode((string)($profileRow->fetchColumn() ?: '{}'), true);
-$profileData = is_array($profileData) ? $profileData : [];
-$heroImage = (string)($profileData['hero_image'] ?? '');
-$heroEnabled = (string)($profileData['hero_image_enabled'] ?? '1') === '1';
-$heroImageValid = preg_match('#^/uploads/hero/[A-Za-z0-9_-]+\.(?:png|webp)$#i', $heroImage) === 1
-    && is_file(dirname(__DIR__) . $heroImage);
-$csrf = htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8');
-
-$counts = $pdo->query("SELECT section, COUNT(*) AS total FROM content_records GROUP BY section")->fetchAll();
-$total = (int)$pdo->query('SELECT COUNT(*) FROM content_records')->fetchColumn();
-$views = (int)$pdo->query('SELECT COUNT(*) FROM page_views')->fetchColumn();
-$recent = $pdo->query('SELECT id,section,title,status,visibility,created_at FROM content_records ORDER BY id DESC LIMIT 12')->fetchAll();
-?>
-<!doctype html><html lang="en" data-theme="light"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Admin Dashboard — Ahamed Drafted</title>
-<link rel="stylesheet" href="../assets/css/tokens.css"><link rel="stylesheet" href="../assets/css/base.css"><link rel="stylesheet" href="../assets/css/components.css"><link rel="stylesheet" href="../assets/css/mobile.css">
-<style>
-.admin-wrap{max-width:1200px;margin:auto;padding:24px}.admin-top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:24px}.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:24px}.admin-panel{background:var(--surface);border:1px solid var(--border-color);padding:20px;margin-bottom:20px}.admin-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.admin-form label{display:flex;flex-direction:column;gap:6px;font-size:13px}.admin-form input,.admin-form select,.admin-form textarea{width:100%;padding:12px;border:1px solid var(--border-color);background:var(--background);color:var(--text-primary);font:inherit;border-radius:2px}.wide{grid-column:1/-1}.notice{padding:12px;background:var(--surface-secondary);margin-bottom:14px}.admin-table{width:100%;border-collapse:collapse}.admin-table th,.admin-table td{text-align:left;padding:10px;border-bottom:1px solid var(--border-color);font-size:13px}.hero-admin-preview{display:block;max-width:260px;max-height:280px;object-fit:contain;background:#111;padding:12px;margin:12px 0}.hero-admin-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.hero-toggle{display:flex;gap:10px;align-items:center;margin:16px 0}.hero-toggle input{width:auto}
-@media(max-width:700px){.admin-wrap{padding:16px}.stats{grid-template-columns:1fr}.admin-form{grid-template-columns:1fr}.wide{grid-column:auto}.admin-panel{padding:15px}.table-scroll{overflow-x:auto}}
-</style></head><body><main class="admin-wrap">
-<header class="admin-top"><div><p class="meta-label">AHAMED DRAFTED / CMS</p><h1 class="h2">Admin Dashboard</h1><p>Signed in as <?= htmlspecialchars($_SESSION['display_name'] ?? 'Admin', ENT_QUOTES, 'UTF-8') ?></p></div><div><a class="btn-editorial btn-editorial--outline" href="../">View Website</a> <a class="btn-editorial" href="logout.php">Log out</a></div></header>
-<?php if($message): ?><p class="notice" role="status"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></p><?php endif; ?><?php if($error): ?><p class="notice" role="alert"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p><?php endif; ?>
-<section class="stats"><div class="admin-panel"><p class="meta-label">CONTENT RECORDS</p><p class="h1"><?= $total ?></p></div><div class="admin-panel"><p class="meta-label">TRACKED PAGE VIEWS</p><p class="h1"><?= $views ?></p></div><div class="admin-panel"><p class="meta-label">CONTENT TYPES</p><p class="h1"><?= count($counts) ?></p></div></section>
-
-<section class="admin-panel" id="hero-image-management">
-<p class="meta-label">HOMEPAGE PRESENTATION</p><h2 class="h3" style="margin:8px 0 6px">Hero Image Management</h2>
-<p style="font-size:13px;color:var(--text-secondary)">Upload a transparent PNG or WebP portrait. The image appears on the right side of the homepage hero.</p>
-<?php if ($heroImageValid): ?><img class="hero-admin-preview" src="<?= htmlspecialchars($heroImage, ENT_QUOTES, 'UTF-8') ?>" alt="Current hero image preview"><?php else: ?><p class="notice">No active hero image is configured. The homepage will keep its text-only layout.</p><?php endif; ?>
-<form method="post" enctype="multipart/form-data" class="admin-form">
-<input type="hidden" name="csrf_token" value="<?= $csrf ?>"><input type="hidden" name="action" value="hero_upload">
-<input type="hidden" name="MAX_FILE_SIZE" value="6291456">
-<label class="wide">Choose new hero image (transparent PNG or WebP, maximum 6 MB)<input id="hero-image-file" type="file" name="hero_image" accept="image/png,image/webp" required></label>
-<div class="wide"><p class="meta-label">SELECTED IMAGE PREVIEW</p><img id="hero-image-preview" alt="Selected hero image preview" hidden style="display:none;max-width:260px;max-height:280px;object-fit:contain;background:#111;padding:12px"></div>
-<div class="wide hero-admin-actions"><button class="btn-editorial" type="submit">Upload and activate</button></div>
-</form>
-<form method="post" class="hero-toggle">
-<input type="hidden" name="csrf_token" value="<?= $csrf ?>"><input type="hidden" name="action" value="hero_toggle">
-<input type="hidden" name="hero_image_enabled" value="0">
-<label style="display:flex;gap:9px;align-items:center"><input type="checkbox" name="hero_image_enabled" value="1" <?= $heroEnabled ? 'checked' : '' ?> <?= !$heroImageValid ? 'disabled' : '' ?>> Show hero image on homepage</label>
-<button class="btn-editorial btn-editorial--outline" type="submit" <?= !$heroImageValid ? 'disabled' : '' ?>>Save display setting</button>
-</form>
-<?php if ($heroImage !== ''): ?><form method="post" onsubmit="return confirm('Remove the current hero image?')" class="hero-admin-actions"><input type="hidden" name="csrf_token" value="<?= $csrf ?>"><input type="hidden" name="action" value="hero_remove"><button class="btn-editorial btn-editorial--outline" type="submit">Remove current image</button></form><?php endif; ?>
-</section>
-
-<section class="admin-panel"><p class="meta-label">REAL CONTENT ENTRY</p><h2 class="h3" style="margin:8px 0 18px">Add a content record</h2>
-<form method="post" class="admin-form"><input type="hidden" name="csrf_token" value="<?= $csrf ?>">
-<label>Content type<select name="section" required><?php foreach($allowed as $type): ?><option value="<?= $type ?>"><?= ucfirst($type) ?></option><?php endforeach; ?></select></label>
-<label>Title<input name="title" required maxlength="255"></label>
-<label>Slug (optional)<input name="slug" maxlength="190"></label>
-<label>Visibility<select name="visibility"><option value="private">Private</option><option value="public">Public</option></select></label>
-<label>Status<select name="status"><option value="draft">Draft</option><option value="published">Published</option><option value="pending">Pending</option></select></label>
-<label class="wide">Content JSON<textarea name="data_json" rows="9" required>{}</textarea></label>
-<p class="wide" style="font-size:13px;color:var(--text-secondary)">Enter the fields required by the selected page, for example: excerpt, category, featured_image, date_formatted, reading_time_minutes and content for a journal entry. No demo records are preloaded.</p>
-<button class="btn-editorial wide" type="submit">Save real content</button></form></section>
-<section class="admin-panel"><p class="meta-label">RECENT RECORDS</p><h2 class="h3" style="margin:8px 0 16px">Content archive</h2><div class="table-scroll"><table class="admin-table"><thead><tr><th>Type</th><th>Title</th><th>Status</th><th>Visibility</th><th>Created</th></tr></thead><tbody><?php foreach($recent as $row): ?><tr><td><?= htmlspecialchars($row['section']) ?></td><td><?= htmlspecialchars($row['title'] ?? '') ?></td><td><?= htmlspecialchars($row['status']) ?></td><td><?= htmlspecialchars($row['visibility']) ?></td><td><?= htmlspecialchars($row['created_at']) ?></td></tr><?php endforeach; ?><?php if(!$recent): ?><tr><td colspan="5">No content has been entered yet.</td></tr><?php endif; ?></tbody></table></div></section>
-</main>
-<script>
-(() => {
-  const input = document.getElementById('hero-image-file');
-  const preview = document.getElementById('hero-image-preview');
-  let previewUrl = null;
-  if (!input || !preview) return;
-  input.addEventListener('change', () => {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    const file = input.files && input.files[0];
-    if (!file) { preview.removeAttribute('src'); preview.hidden = true; preview.style.display = 'none'; return; }
-    if (!['image/png', 'image/webp'].includes(file.type) || file.size > 6 * 1024 * 1024) {
-      input.value = '';
-      preview.removeAttribute('src'); preview.hidden = true; preview.style.display = 'none';
-      alert('Choose a PNG or WebP image smaller than 6 MB.');
-      return;
-    }
-    previewUrl = URL.createObjectURL(file);
-    preview.src = previewUrl;
-    preview.hidden = false;
-    preview.style.display = 'block';
-  });
-  window.addEventListener('beforeunload', () => { if (previewUrl) URL.revokeObjectURL(previewUrl); });
-})();
-</script>
-</body></html>
+$edit=null;if(isset($_GET['edit'])){$s=$pdo->prepare('SELECT * FROM content_records WHERE id=?');$s->execute([(int)$_GET['edit']]);$edit=$s->fetch()?:null;}
+$editData=$edit?json_decode((string)$edit['data_json'],true):[];if(!is_array($editData))$editData=[];
+$filter=isset($_GET['type'])&&isset($types[$_GET['type']])?$_GET['type']:'';
+$sql='SELECT id,section,title,status,visibility,created_at FROM content_records'.($filter?' WHERE section=?':'').' ORDER BY id DESC LIMIT 100';$list=$pdo->prepare($sql);$list->execute($filter?[$filter]:[]);$records=$list->fetchAll();
+$total=(int)$pdo->query('SELECT COUNT(*) FROM content_records')->fetchColumn();$views=(int)$pdo->query('SELECT COUNT(*) FROM page_views')->fetchColumn();
+?><!doctype html><html lang="en" data-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CMS · Ahamed Drafted</title><link rel="stylesheet" href="../assets/css/tokens.css"><link rel="stylesheet" href="../assets/css/base.css"><link rel="stylesheet" href="../assets/css/components.css"><style>
+*{box-sizing:border-box}.wrap{max-width:1280px;margin:auto;padding:24px}.top,.actions,.tabs{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.stats,.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.panel{background:var(--surface);border:1px solid var(--border-color);padding:20px;margin:18px 0}.stat{font-size:28px}.tabs{justify-content:flex-start;border-bottom:1px solid var(--border-color);padding-bottom:12px}.tabs a{padding:9px 12px;border:1px solid var(--border-color);text-decoration:none;font-size:12px}.form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.form label{display:flex;flex-direction:column;gap:6px;font-size:13px}.form input,.form select,.form textarea{width:100%;padding:12px;border:1px solid var(--border-color);background:var(--background);color:var(--text-primary);font:inherit}.wide{grid-column:1/-1}.notice{padding:12px;background:var(--surface-secondary)}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:10px;border-bottom:1px solid var(--border-color);font-size:12px}.scroll{overflow-x:auto}.muted{color:var(--text-secondary);font-size:13px}.danger{color:#b42318}.preview{max-width:220px;max-height:180px;object-fit:contain}
+@media(max-width:720px){.wrap{padding:14px}.stats,.grid{grid-template-columns:1fr}.form{grid-template-columns:1fr}.wide{grid-column:auto}.panel{padding:14px}.scroll table{min-width:650px}}
+</style></head><body><main class="wrap">
+<header class="top"><div><p class="meta-label">AHAMED DRAFTED / CONTENT MANAGEMENT</p><h1 class="h2">Admin Studio</h1><p class="muted">Signed in as <?=htmlspecialchars($_SESSION['display_name']??'Admin',ENT_QUOTES,'UTF-8')?></p></div><div class="actions"><a class="btn-editorial btn-editorial--outline" href="../">View website</a><a class="btn-editorial" href="logout.php">Log out</a></div></header>
+<?php if($msg):?><p class="notice" role="status"><?=htmlspecialchars($msg)?></p><?php endif;?><?php if($err):?><p class="notice" role="alert"><?=htmlspecialchars($err)?></p><?php endif;?>
+<section class="stats"><div class="panel"><p class="meta-label">CONTENT RECORDS</p><p class="stat"><?=$total?></p></div><div class="panel"><p class="meta-label">PAGE VIEWS</p><p class="stat"><?=$views?></p></div><div class="panel"><p class="meta-label">ADMIN MODULES</p><p class="stat">10+</p></div></section>
+<nav class="tabs"><a href="#home">Homepage</a><a href="#editor">Create / Edit</a><a href="#library">Content Library</a><a href="#library">Gallery</a><a href="#editor">Music</a><a href="#editor">Events & Calendar</a><a href="#editor">Life Timeline</a></nav>
+<section class="panel" id="home"><p class="meta-label">HOMEPAGE BUILDER</p><h2 class="h3">Homepage presentation</h2><p class="muted">Edit the hero copy, biography and portrait without changing existing profile settings.</p>
+<?php if(!empty($profile['hero_image'])):?><img class="preview" src="<?=htmlspecialchars($profile['hero_image'])?>" alt="Current hero image"><?php endif;?>
+<form class="form" method="post" enctype="multipart/form-data"><input type="hidden" name="csrf_token" value="<?=$csrf?>"><input type="hidden" name="action" value="save_home">
+<label>Site tagline<input name="tagline" value="<?=htmlspecialchars($profile['tagline']??'')?>"></label><label>Short bio<input name="short_bio" value="<?=htmlspecialchars($profile['short_bio']??'')?>"></label><label class="wide">Hero headline<input name="hero_headline" value="<?=htmlspecialchars($profile['hero_headline']??'')?>"></label><label class="wide">Hero supporting text<textarea name="hero_supporting" rows="2"><?=htmlspecialchars($profile['hero_supporting']??'')?></textarea></label><label class="wide">Full biography<textarea name="full_biography" rows="5"><?=htmlspecialchars($profile['full_biography']??'')?></textarea></label><label>Hero portrait (PNG/JPG/WebP, max 8 MB)<input type="file" name="hero_image" accept="image/jpeg,image/png,image/webp"></label><label>Image alt text<input name="hero_image_alt" value="<?=htmlspecialchars($profile['hero_image_alt']??'')?>"></label><label><span>Show hero portrait</span><input type="checkbox" name="hero_image_enabled" value="1" <?=($profile['hero_image_enabled']??'1')==='1'?'checked':''?>></label><label><span>Remove current portrait</span><input type="checkbox" name="clear_hero" value="1"></label><button class="btn-editorial wide">Save homepage settings</button></form></section>
+<section class="panel" id="editor"><p class="meta-label">CONTENT STUDIO</p><h2 class="h3"><?=$edit?'Edit content':'Create content'?></h2><p class="muted">Upload images for gallery, memories, birthdays, events and posts. Music accepts an external listening link or an audio file you own or are authorised to upload.</p>
+<form class="form" method="post" enctype="multipart/form-data"><input type="hidden" name="csrf_token" value="<?=$csrf?>"><input type="hidden" name="action" value="save_record"><input type="hidden" name="id" value="<?=(int)($edit['id']??0)?>">
+<label>Content type<select name="section" required><?php foreach($types as $k=>$v):?><option value="<?=$k?>" <?=($edit['section']??'')===$k?'selected':''?>><?=htmlspecialchars($v)?></option><?php endforeach;?></select></label>
+<label>Title<input name="title" required maxlength="255" value="<?=htmlspecialchars($edit['title']??'')?>"></label>
+<label>Slug (optional)<input name="slug" value="<?=htmlspecialchars($editData['slug']??'')?>"></label><label>Date<input type="date" name="event_date" value="<?=htmlspecialchars($editData['event_date']??'')?>"></label>
+<label>Category / album type<input name="category" value="<?=htmlspecialchars($editData['category']??'')?>"></label><label>Artist (music)<input name="artist" value="<?=htmlspecialchars($editData['artist']??'')?>"></label>
+<label class="wide">Description / caption<textarea name="description" rows="3"><?=htmlspecialchars($editData['description']??$editData['excerpt']??$editData['caption']??'')?></textarea></label>
+<label>Photo upload (JPG/PNG/WebP/GIF, max 8 MB)<input type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif"></label>
+<label>Audio upload (MP3/M4A/OGG/WAV/WebM, max 15 MB)<input type="file" name="audio" accept="audio/*"></label>
+<label class="wide">Music platform URL (YouTube / Spotify etc.)<input type="url" name="external_url" value="<?=htmlspecialchars($editData['external_url']??'')?>"></label>
+<label class="wide">Article body<textarea name="body" rows="7"><?=htmlspecialchars($editData['content']??'')?></textarea></label>
+<label>Album slug for photo (optional)<input name="album_slug" value="<?=htmlspecialchars($editData['album_slug']??'')?>"></label><label>Location<input name="location" value="<?=htmlspecialchars($editData['location_approx']??'')?>"></label>
+<label>Reading time (minutes)<input type="number" min="1" name="reading_time" value="<?= (int)($editData['reading_time_minutes']??3)?>"></label>
+<label>Visibility<select name="visibility"><option value="public" <?=($edit['visibility']??'public')==='public'?'selected':''?>>Public</option><option value="private" <?=($edit['visibility']??'')==='private'?'selected':''?>>Private</option></select></label>
+<label>Status<select name="status"><?php foreach(['draft','published','pending','archived'] as $st):?><option value="<?=$st?>" <?=($edit['status']??'draft')===$st?'selected':''?>><?=ucfirst($st)?></option><?php endforeach;?></select></label>
+<button class="btn-editorial wide"><?= $edit?'Update record':'Save record'?></button></form></section>
+<section class="panel" id="library"><div class="top"><div><p class="meta-label">CONTENT LIBRARY / MEDIA MANAGER</p><h2 class="h3">Your content</h2></div><form method="get"><select name="type" onchange="this.form.submit()"><option value="">All content types</option><?php foreach($types as $k=>$v):?><option value="<?=$k?>" <?=$filter===$k?'selected':''?>><?=htmlspecialchars($v)?></option><?php endforeach;?></select></form></div><div class="scroll"><table><thead><tr><th>Type</th><th>Title</th><th>Status</th><th>Visibility</th><th>Created</th><th>Manage</th></tr></thead><tbody><?php foreach($records as $r):?><tr><td><?=htmlspecialchars($types[$r['section']]??$r['section'])?></td><td><?=htmlspecialchars($r['title']??'')?></td><td><?=htmlspecialchars($r['status'])?></td><td><?=htmlspecialchars($r['visibility'])?></td><td><?=htmlspecialchars($r['created_at'])?></td><td><a href="?edit=<?=(int)$r['id']?>#editor">Edit</a><form method="post" style="display:inline" onsubmit="return confirm('Delete this record?')"><input type="hidden" name="csrf_token" value="<?=$csrf?>"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?=(int)$r['id']?>"><button class="danger" type="submit">Delete</button></form></td></tr><?php endforeach;?><?php if(!$records):?><tr><td colspan="6">No content records yet.</td></tr><?php endif;?></tbody></table></div><p class="muted">Showing up to 100 records. Existing records are preserved unless you explicitly delete them.</p></section>
+</main></body></html>

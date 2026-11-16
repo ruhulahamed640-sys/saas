@@ -30,7 +30,7 @@ function get_ahamed_archive_data(): array {
     }
 
     $stmt = $pdo->prepare(
-        "SELECT section, data_json FROM content_records
+        "SELECT id, section, data_json, visibility, status, published_at FROM content_records
          WHERE visibility = 'public' AND status = 'published'
          ORDER BY COALESCE(published_at, created_at) DESC, id DESC"
     );
@@ -46,7 +46,7 @@ function get_ahamed_archive_data(): array {
         $target = $sectionMap[$row['section']] ?? null;
         if ($target === null) continue;
         $record = json_decode((string)$row['data_json'], true);
-        if (is_array($record)) $empty[$target][] = $record;
+        if (is_array($record)) { $record['id']=(int)$row['id']; $record['section']=$row['section']; $record['visibility']=$row['visibility']; $record['status']=$row['status']; $record['published_at']=$row['published_at']; $empty[$target][] = $record; }
     }
     return $empty;
 }

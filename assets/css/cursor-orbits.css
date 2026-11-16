@@ -1,0 +1,39 @@
+/* Global cursor-reactive editorial orbit decoration */
+.cursor-orbits {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  contain: layout paint;
+  color: var(--orbit-color, currentColor);
+  opacity: .72;
+}
+.cursor-orbits__ring {
+  position: absolute;
+  display: block;
+  width: clamp(260px, 34vw, 560px);
+  aspect-ratio: 1;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  opacity: .17;
+  transform: translate3d(0,0,0);
+  will-change: transform;
+}
+.cursor-orbits__ring:nth-child(1) { width: clamp(300px, 42vw, 680px); top: 7%; right: -13%; }
+.cursor-orbits__ring:nth-child(2) { width: clamp(220px, 29vw, 470px); top: 42%; left: -12%; opacity: .13; }
+.cursor-orbits__ring:nth-child(3) { width: clamp(160px, 21vw, 340px); bottom: -12%; right: 13%; opacity: .11; }
+.site-header, .editorial-shell { position: relative; z-index: 1; }
+@media (hover: hover) and (pointer: fine) {
+  .cursor-orbits__ring { transition: border-color .35s ease, opacity .35s ease; }
+  body:has(.cursor-orbits):hover .cursor-orbits__ring { opacity: .22; }
+}
+@media (max-width: 760px) {
+  .cursor-orbits { opacity: .48; }
+  .cursor-orbits__ring:nth-child(1) { right: -35%; top: 12%; }
+  .cursor-orbits__ring:nth-child(2) { left: -30%; top: 48%; }
+  .cursor-orbits__ring:nth-child(3) { right: -12%; bottom: -8%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cursor-orbits__ring { will-change: auto; transition: none !important; }
+}

@@ -173,3 +173,50 @@
 @media (prefers-reduced-motion: reduce) {
   .mobile-menu-toggle, .menu-toggle-icon span { transition: none !important; }
 }
+
+
+/* Final header overflow correction: keep actions visible, scroll only nav links */
+@media (min-width: 1025px) {
+  .site-header__inner {
+    display: flex !important;
+    gap: clamp(10px, 1.2vw, 18px) !important;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .site-header .site-wordmark {
+    flex: 0 0 132px;
+    width: 132px;
+    min-width: 0;
+    font-size: clamp(15px, 1.1vw, 19px);
+    letter-spacing: .12em;
+    white-space: normal;
+  }
+  .site-header .site-nav {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 0;
+    justify-content: flex-start;
+    gap: clamp(9px, .95vw, 15px);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+    padding: 0 2px 5px;
+  }
+  .site-header .site-nav__link {
+    flex: 0 0 auto;
+    font-size: clamp(9px, .72vw, 11px);
+    letter-spacing: .035em;
+  }
+  .site-header .header-actions {
+    flex: 0 0 auto;
+    margin-left: 0;
+    gap: 6px;
+  }
+  .site-header .header-actions .btn-editorial {
+    max-width: 88px;
+    white-space: normal;
+    line-height: 1.25;
+    padding: 9px 10px;
+  }
+}

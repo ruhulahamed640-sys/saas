@@ -2,36 +2,48 @@
 .cursor-orbits {
   position: fixed;
   inset: 0;
-  z-index: 0;
+  z-index: 2;
   overflow: hidden;
   pointer-events: none;
-  contain: layout paint;
-  color: var(--orbit-color, currentColor);
-  opacity: .72;
+  color: #FFFFFF;
+  opacity: 1;
+  isolation: isolate;
 }
 .cursor-orbits__ring {
   position: absolute;
   display: block;
-  width: clamp(260px, 34vw, 560px);
+  width: clamp(280px, 38vw, 620px);
   aspect-ratio: 1;
-  border: 1px solid currentColor;
+  border: 1.5px solid currentColor;
   border-radius: 50%;
-  opacity: .17;
+  opacity: .30;
   transform: translate3d(0,0,0);
   will-change: transform;
+  box-shadow: 0 0 1px rgba(255,255,255,.12);
 }
-.cursor-orbits__ring:nth-child(1) { width: clamp(300px, 42vw, 680px); top: 7%; right: -13%; }
-.cursor-orbits__ring:nth-child(2) { width: clamp(220px, 29vw, 470px); top: 42%; left: -12%; opacity: .13; }
-.cursor-orbits__ring:nth-child(3) { width: clamp(160px, 21vw, 340px); bottom: -12%; right: 13%; opacity: .11; }
-.site-header, .editorial-shell { position: relative; z-index: 1; }
-@media (hover: hover) and (pointer: fine) {
-  .cursor-orbits__ring { transition: border-color .35s ease, opacity .35s ease; }
-  body:has(.cursor-orbits):hover .cursor-orbits__ring { opacity: .22; }
+.cursor-orbits__ring:nth-child(1) {
+  width: clamp(340px, 45vw, 720px);
+  top: 8%;
+  right: -15%;
+  opacity: .34;
 }
+.cursor-orbits__ring:nth-child(2) {
+  width: clamp(260px, 32vw, 520px);
+  top: 38%;
+  left: -13%;
+  opacity: .25;
+}
+.cursor-orbits__ring:nth-child(3) {
+  width: clamp(190px, 24vw, 390px);
+  bottom: -14%;
+  right: 12%;
+  opacity: .22;
+}
+.site-header { position: sticky; z-index: 100; }
 @media (max-width: 760px) {
-  .cursor-orbits { opacity: .48; }
-  .cursor-orbits__ring:nth-child(1) { right: -35%; top: 12%; }
-  .cursor-orbits__ring:nth-child(2) { left: -30%; top: 48%; }
+  .cursor-orbits { opacity: .72; }
+  .cursor-orbits__ring:nth-child(1) { right: -38%; top: 12%; }
+  .cursor-orbits__ring:nth-child(2) { left: -34%; top: 48%; }
   .cursor-orbits__ring:nth-child(3) { right: -12%; bottom: -8%; }
 }
 @media (prefers-reduced-motion: reduce) {

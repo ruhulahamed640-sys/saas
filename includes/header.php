@@ -74,6 +74,9 @@ $canonical = 'https://ruhul.online/' . ($canonicalPath ?? '');
         <a href="/places.php" class="site-nav__link <?= $activeNav === 'places' ? 'is-active' : '' ?>">Places</a>
         <a href="/portfolio.php" class="site-nav__link <?= $activeNav === 'portfolio' ? 'is-active' : '' ?>">Portfolio</a>
         <a href="/events.php" class="site-nav__link <?= $activeNav === 'events' ? 'is-active' : '' ?>">Events</a>
+        <a href="/calendar.php" class="site-nav__link <?= $activeNav === 'calendar' ? 'is-active' : '' ?>">Life Calendar</a>
+        <a href="/birthdays.php" class="site-nav__link <?= $activeNav === 'birthdays' ? 'is-active' : '' ?>">Birthdays</a>
+        <a href="/music.php" class="site-nav__link <?= $activeNav === 'music' ? 'is-active' : '' ?>">Music</a>
         <a href="/guestbook.php" class="site-nav__link <?= $activeNav === 'guestbook' ? 'is-active' : '' ?>">Guestbook</a>
       </nav>
       <div class="header-actions">

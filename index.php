@@ -31,6 +31,7 @@ $heroImageValid = $heroImageEnabled
   </div>
 </section>
 
+<?php if (($profile['show_journal_section'] ?? '1') === '1'): ?>
 <section class="editorial-section">
   <div class="editorial-container">
     <p class="meta-label">01 / JOURNAL</p>
@@ -53,6 +54,8 @@ $heroImageValid = $heroImageEnabled
   </div>
 </section>
 
+<?php endif; ?>
+<?php if (($profile['show_portfolio_section'] ?? '1') === '1'): ?>
 <section class="editorial-section">
   <div class="editorial-container">
     <p class="meta-label">02 / PORTFOLIO</p><h2 class="h2 section-heading">Selected Work</h2>
@@ -64,4 +67,5 @@ $heroImageValid = $heroImageEnabled
     <a class="text-link" href="/portfolio.php">View portfolio →</a>
   </div>
 </section>
+<?php endif; ?>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
